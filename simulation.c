@@ -49,6 +49,19 @@ typedef struct intrsctns {
     street* east;
 } intrsctn;
 
+// denotes a place on the grid with column #, row # and which part of the street
+typedef struct location {
+    unsigned int column;
+    unsigned int row;
+    unsigned int add;
+} loc;
+
+// denotes a car
+typedef struct vehicle {
+    loc* start;
+    loc* end;
+} car;
+
 
 
 /***************************************************************************/
@@ -178,6 +191,12 @@ int main(int argc, char *argv[])
     // ns rows use generators 1, 3, 5, etc
     // each slot will have a threshold chance to have a starting car
     // then it will pick a random slot on the grid to finish at
+    // DUE to the very large nature of the possible number of slots
+    // 4 random numbers will be used to define a finished location
+    //  1 for on e/w or n/s
+    //  1 for row
+    //  1 for column
+    //  1 for street position
     
 
     
