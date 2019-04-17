@@ -8,7 +8,7 @@
 #include<errno.h>
 #include<math.h>
 
-
+#include "clcg4.h"
 #include<mpi.h>
 
 // #define BGQ 1 // when running BG/Q, comment out when testing on mastiff
@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
     unsigned int rpr = SIDE_LENGTH/mpi_commsize;
     float proportion = 0.25;
     unsigned long long capacity = 2*(SIDE_LENGTH-1)*(SIDE_LENGTH)*ROAD_CAP;
+    unsigned long long n_cars = (unsigned long long) (((long double) proportion)*capacity);
 
     // To save space even ticks will be computed in now variables and odd
     // ticks will be computed in in nxt variables.
@@ -103,9 +104,9 @@ int main(int argc, char *argv[])
     // TO DO: check to see if it works and repeat for next ones
     for(size_t i = 0; i < rpr*SIDE_LENGTH; i++)
     {
-        if (mpi_myrank == 0) {
-            printf("%lu\n", i);
-        }
+        // if (mpi_myrank == 0) {
+        //     printf("%lu\n", i);
+        // }
         
         if(i/SIDE_LENGTH == 0) {
             // if touching north side
@@ -169,6 +170,14 @@ int main(int argc, char *argv[])
     check_grid(intrsctn_nxt, streets_ew_nxt, streets_ns_nxt, 
             ghost_ns_nrth, ghost_ns_soth, ghost_ew_soth);
 #endif
+
+    // initial cars
+    // each car will have a starting point and an end point
+    // each row will use its corresponding rng number generator
+    // ew rows use generators 0, 2, 4, etc
+    // ns rows use generators 1, 3, 5, etc
+    // each slot will have a threshold chance to have a starting car
+    // then it will pick a random slot on the grid to finish at
     
 
     
