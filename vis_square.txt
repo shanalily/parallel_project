@@ -1,0 +1,47 @@
+This is a model for how the grid gets divided up between ranks
+The south east corner will look like square 4
+The south squares will look like square 3
+The east squares will look like square 2
+And all the rest of the squares will look like square 1
+
+All squares will have ghost rows its just that for type 2, 3, 4 they
+will also be responsible for updating their ghost rows
+
+This is a 4 x 4 grid so it actually has 5 x 5 streets
+A 16 x 16 grid will actually have 17 x 17 streets
+
+--> East
+Square 1 Square 2
+.--.--.  .--.--. 
+|  |     |  |  |
+.--.--.  .--.--.
+|  |     |  |  |
+.  .     .  .  .
+
+.--.--.  .--.--.
+|  |     |  |  |
+.--.--.  .--.--.
+|  |     |  |  |
+.--.--.  .--.--.
+Square 3 Square 4
+
+
+A 9 square model
+
+.--.--.  .--.--.  .--.--. 
+|  |     |  |     |  |  |
+.--.--.  .--.--.  .--.--.
+|  |     |  |     |  |  |
+.  .     .  .     .  .  .
+
+.--.--.  .--.--.  .--.--. 
+|  |     |  |     |  |  |
+.--.--.  .--.--.  .--.--.
+|  |     |  |     |  |  |
+.  .     .  .     .  .  .
+
+.--.--.  .--.--.  .--.--.
+|  |     |  |     |  |  |
+.--.--.  .--.--.  .--.--.
+|  |     |  |     |  |  |
+.--.--.  .--.--.  .--.--.
