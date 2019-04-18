@@ -37,23 +37,12 @@
 /* Structs *****************************************************************/
 /***************************************************************************/
 
-typedef struct streets {
-    short frwd[ROAD_CAP];
-    short bckw[ROAD_CAP];
-} street;
-
-typedef struct intrsctns {
-    street* nrth;
-    street* soth;
-    street* west;
-    street* east;
-} intrsctn;
 
 // denotes a place on the grid with column #, row # and which part of the street
 typedef struct location {
-    unsigned int column;
+    unsigned int col;
     unsigned int row;
-    unsigned int add;
+    unsigned int idx;
 } loc;
 
 // denotes a car
@@ -62,6 +51,17 @@ typedef struct vehicle {
     loc* end;
 } car;
 
+typedef struct streets {
+    car go_es[ROAD_CAP] = {NULL};
+    car go_wn[ROAD_CAP] = {NULL};
+} street;
+
+typedef struct intrsctns {
+    street* nrth;
+    street* soth;
+    street* west;
+    street* east;
+} intrsctn;
 
 
 /***************************************************************************/
@@ -93,6 +93,8 @@ int main(int argc, char *argv[])
     float proportion = 0.25;
     unsigned long long capacity = 2*(SIDE_LENGTH-1)*(SIDE_LENGTH)*ROAD_CAP;
     unsigned long long n_cars = (unsigned long long) (((long double) proportion)*capacity);
+    unsigned int glbl_pos = rpr*mpi_myrank;
+    InitDefault();
 
     // To save space even ticks will be computed in now variables and odd
     // ticks will be computed in in nxt variables.
@@ -197,10 +199,91 @@ int main(int argc, char *argv[])
     //  1 for row
     //  1 for column
     //  1 for street position
+
+    // generate east_west cars
+    int idx;
+    for(size_t i = 0; i < rpr*(SIDE_LENGTH-1); i++)
+    {
+        idx = glbl_index + i/(SIDE_LENGTH-1);
+        row = i/(SIDE_LENGTH-1);
+        col = i%(SIDE_LENGTH-1);
+        for(size_t j = 0; j < ROAD_CAP; j++) {
+            if(GenVal(idx) < proportion) {
+                // start location
+                loc* strt = malloc(sizeof(loc));
+                strt->col = col;
+                strt->row = row;
+                strt->idx = j;
+
+                // end location (non-unique)
+                loc* _end = malloc(sizeof(loc));
+                end->col = (int) GenVal(idx)*(SIDE_LENGTH-1);
+                end->row = (int) GenVal(idx)*(SIDE_LENGTH-1);
+                end->row = (int) GenVal(idx)*(ROAD_CAP);
+                car* c = malloc(sizeof(car));
+                c->start = strt;
+                c->end = _end;
+
+                // if it needs to go right or left
+                if (_end->col >= strt->col) {
+                    streets_ew_now[i]->go_es[j] = car;
+                }else{
+                    streets_ew_now[i]->go_wn[j] = car;
+                }
+                
+            } 
+        }
+    }
+
+    // generate north_south cars
+    for(size_t i = 0; i < (rpr-1)*(SIDE_LENGTH); i++)
+    {
+        idx = glbl_index + i/(SIDE_LENGTH);
+        row = i/(SIDE_LENGTH);
+        col = i%(SIDE_LENGTH);
+        for(size_t j = 0; j < ROAD_CAP; j++) {
+            if(GenVal(idx) < proportion) {
+                // start location
+                loc* strt = malloc(sizeof(loc));
+                strt->col = col;
+                strt->row = row;
+                strt->idx = j;
+
+                // end location (non-unique)
+                loc* _end = malloc(sizeof(loc));
+                end->col = (int) GenVal(idx)*(SIDE_LENGTH-1);
+                end->row = (int) GenVal(idx)*(SIDE_LENGTH-1);
+                end->row = (int) GenVal(idx)*(ROAD_CAP);
+                car* c = malloc(sizeof(car));
+                c->start = strt;
+                c->end = _end;
+
+                // if it needs to go right or left
+                if (_end->row >= strt->row) {
+                    streets_ew_now[i]->go_es[j] = car;
+                }else{
+                    streets_ew_now[i]->go_wn[j] = car;
+                }
+                
+            } 
+        }
+    }
+    
     
 
     
     MPI_Barrier( MPI_COMM_WORLD );
+
+    // frees
+    free(streets_ew_now);
+    free(streets_ew_nxt);
+    free(streets_ns_now);
+    free(streets_ns_nxt);
+    free(ghost_ns_nrth);
+    free(ghost_ns_soth);
+    free(ghost_ew_soth);
+    free(intrsctn_now);
+    free(intrsctn_nxt);
     MPI_Finalize();
     return 0;
 }
