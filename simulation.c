@@ -18,6 +18,9 @@
 #else
 #define GetTimeBase MPI_Wtime            
 #endif
+#define DEBUG 1
+
+#include <assert.h>
 
 /***************************************************************************/
 /* Defines *****************************************************************/
@@ -29,7 +32,6 @@
 #define SIDE_LENGTH 128
 #endif
 
-// #define DEBUG 1
 
 #define ROAD_CAP 4
 
@@ -52,8 +54,8 @@ typedef struct vehicle {
 } car;
 
 typedef struct streets {
-    car go_es[ROAD_CAP] = {NULL};
-    car go_wn[ROAD_CAP] = {NULL};
+    car* go_es[ROAD_CAP];
+    car* go_wn[ROAD_CAP];
 } street;
 
 typedef struct intrsctns {
@@ -73,7 +75,10 @@ typedef struct intrsctns {
 /***************************************************************************/
 
 // this checks the grid for validity
-check_grid(intrsctn* is, street* s_ew, street* s_ns, street* g_n_ns, street* g_s_ns, street* g_s_ew);
+void check_grid(unsigned int rpr, intrsctn* is, 
+        street* s_ew, street* s_ns, street* g_n_ns, street* g_s_ns);
+
+void print_grid();
 
 /***************************************************************************/
 /* Function: Main **********************************************************/
@@ -93,7 +98,7 @@ int main(int argc, char *argv[])
     float proportion = 0.25;
     unsigned long long capacity = 2*(SIDE_LENGTH-1)*(SIDE_LENGTH)*ROAD_CAP;
     unsigned long long n_cars = (unsigned long long) (((long double) proportion)*capacity);
-    unsigned int glbl_pos = rpr*mpi_myrank;
+    unsigned int glbl_index = rpr*mpi_myrank;
     InitDefault();
 
     // To save space even ticks will be computed in now variables and odd
@@ -106,11 +111,9 @@ int main(int argc, char *argv[])
     street* streets_ns_now = malloc((rpr-1)*SIDE_LENGTH*sizeof(street));
     street* streets_ns_nxt = malloc((rpr-1)*SIDE_LENGTH*sizeof(street));
     // ghost streets
-    // need EW streets from rank North and NS from rank both North and South
-    // BOTTOM ROW MUST keep track of GHOST_ew_soth
+    // these streets are the ones in the middle of the rectangle
     street* ghost_ns_nrth = malloc(SIDE_LENGTH*sizeof(street));
     street* ghost_ns_soth = malloc(SIDE_LENGTH*sizeof(street));
-    street* ghost_ew_soth = malloc((SIDE_LENGTH-1)*sizeof(street));
     // array of intersections
     intrsctn* intrsctn_now = malloc(rpr*SIDE_LENGTH*sizeof(intrsctn));
     intrsctn* intrsctn_nxt = malloc(rpr*SIDE_LENGTH*sizeof(intrsctn));
@@ -133,57 +136,46 @@ int main(int argc, char *argv[])
                 intrsctn_nxt[i].nrth = NULL;
             }
         } else {
-            intrsctn_now[i].nrth = &streets_ns_now[i];
-            intrsctn_nxt[i].nrth = &streets_ns_nxt[i];
+            intrsctn_now[i].nrth = &streets_ns_now[i-SIDE_LENGTH];
+            intrsctn_nxt[i].nrth = &streets_ns_nxt[i-SIDE_LENGTH];
         }
         if(i/SIDE_LENGTH == SIDE_LENGTH-1) {
             // if touching south side
             if(mpi_myrank != mpi_commsize-1) {
-                intrsctn_now[i].soth = &ghost_ns_soth[i];
-                intrsctn_nxt[i].soth = &ghost_ns_soth[i];
+                intrsctn_now[i].soth = &ghost_ns_soth[i%SIDE_LENGTH];
+                intrsctn_nxt[i].soth = &ghost_ns_soth[i%SIDE_LENGTH];
             } else {
                 intrsctn_now[i].soth = NULL;
                 intrsctn_nxt[i].soth = NULL;
             }
         } else {
-            intrsctn_now[i].soth = &streets_ns_now[i-SIDE_LENGTH];
-            intrsctn_nxt[i].soth = &streets_ns_nxt[i-SIDE_LENGTH];
+            intrsctn_now[i].soth = &streets_ns_now[i];
+            intrsctn_nxt[i].soth = &streets_ns_nxt[i];
         }
-        if(i%SIDE_LENGTH == 0) {
+        if(i%SIDE_LENGTH == SIDE_LENGTH-1) {
             // if touching east side
             intrsctn_now[i].east = NULL;
             intrsctn_nxt[i].east = NULL;
         } else {
-            if(i/SIDE_LENGTH == SIDE_LENGTH-1) {
-                // if touching south side
-                intrsctn_now[i].east = &ghost_ew_soth[i];
-                intrsctn_nxt[i].east = &ghost_ew_soth[i];
-            } else {
-                intrsctn_now[i].east = &streets_ew_now[i-i/SIDE_LENGTH];
-                intrsctn_nxt[i].east = &streets_ew_nxt[i-i/SIDE_LENGTH];
-            }
+            intrsctn_now[i].east = &streets_ew_now[i-i/SIDE_LENGTH];
+            intrsctn_nxt[i].east = &streets_ew_nxt[i-i/SIDE_LENGTH];
         }
-        if(i%SIDE_LENGTH == SIDE_LENGTH-1) {
+        if(i%SIDE_LENGTH == 0) {
             // if touching west side
             intrsctn_now[i].west = NULL;
             intrsctn_nxt[i].west = NULL;
         } else {
-            if(mpi_myrank != mpi_commsize-1) {
-                intrsctn_now[i].west = &ghost_ew_soth[i-1];
-                intrsctn_nxt[i].west = &ghost_ew_soth[i-1];
-            } else {
-                intrsctn_now[i].west = &streets_ew_now[i-i/SIDE_LENGTH];
-                intrsctn_nxt[i].west = &streets_ew_now[i-i/SIDE_LENGTH];
-            }
+            intrsctn_now[i].west = &streets_ew_now[i-1-i/SIDE_LENGTH];
+            intrsctn_nxt[i].west = &streets_ew_nxt[i-1-i/SIDE_LENGTH];
         }
     }
 
 // check if grids are valid
 #ifdef DEBUG
-    check_grid(intrsctn_now, streets_ew_now, streets_ns_now, 
-            ghost_ns_nrth, ghost_ns_soth, ghost_ew_soth);
-    check_grid(intrsctn_nxt, streets_ew_nxt, streets_ns_nxt, 
-            ghost_ns_nrth, ghost_ns_soth, ghost_ew_soth);
+    check_grid(rpr, intrsctn_now, streets_ew_now, streets_ns_now, 
+            ghost_ns_nrth, ghost_ns_soth);
+    check_grid(rpr, intrsctn_nxt, streets_ew_nxt, streets_ns_nxt, 
+            ghost_ns_nrth, ghost_ns_soth);
 #endif
 
     // initial cars
@@ -202,6 +194,8 @@ int main(int argc, char *argv[])
 
     // generate east_west cars
     int idx;
+    int row;
+    int col;
     for(size_t i = 0; i < rpr*(SIDE_LENGTH-1); i++)
     {
         idx = glbl_index + i/(SIDE_LENGTH-1);
@@ -217,18 +211,18 @@ int main(int argc, char *argv[])
 
                 // end location (non-unique)
                 loc* _end = malloc(sizeof(loc));
-                end->col = (int) GenVal(idx)*(SIDE_LENGTH-1);
-                end->row = (int) GenVal(idx)*(SIDE_LENGTH-1);
-                end->row = (int) GenVal(idx)*(ROAD_CAP);
+                _end->col = (int) GenVal(idx)*(SIDE_LENGTH-1);
+                _end->row = (int) GenVal(idx)*(SIDE_LENGTH-1);
+                _end->row = (int) GenVal(idx)*(ROAD_CAP);
                 car* c = malloc(sizeof(car));
                 c->start = strt;
                 c->end = _end;
 
                 // if it needs to go right or left
                 if (_end->col >= strt->col) {
-                    streets_ew_now[i]->go_es[j] = car;
+                    streets_ew_now[i].go_es[j] = c;
                 }else{
-                    streets_ew_now[i]->go_wn[j] = car;
+                    streets_ew_now[i].go_wn[j] = c;
                 }
                 
             } 
@@ -251,18 +245,18 @@ int main(int argc, char *argv[])
 
                 // end location (non-unique)
                 loc* _end = malloc(sizeof(loc));
-                end->col = (int) GenVal(idx)*(SIDE_LENGTH-1);
-                end->row = (int) GenVal(idx)*(SIDE_LENGTH-1);
-                end->row = (int) GenVal(idx)*(ROAD_CAP);
+                _end->col = (int) GenVal(idx)*(SIDE_LENGTH-1);
+                _end->row = (int) GenVal(idx)*(SIDE_LENGTH-1);
+                _end->row = (int) GenVal(idx)*(ROAD_CAP);
                 car* c = malloc(sizeof(car));
                 c->start = strt;
                 c->end = _end;
 
                 // if it needs to go right or left
                 if (_end->row >= strt->row) {
-                    streets_ew_now[i]->go_es[j] = car;
+                    streets_ns_now[i].go_es[j] = c;
                 }else{
-                    streets_ew_now[i]->go_wn[j] = car;
+                    streets_ns_now[i].go_wn[j] = c;
                 }
                 
             } 
@@ -281,7 +275,6 @@ int main(int argc, char *argv[])
     free(streets_ns_nxt);
     free(ghost_ns_nrth);
     free(ghost_ns_soth);
-    free(ghost_ew_soth);
     free(intrsctn_now);
     free(intrsctn_nxt);
     MPI_Finalize();
@@ -291,3 +284,33 @@ int main(int argc, char *argv[])
 /***************************************************************************/
 /* Other Functions - You write as part of the assignment********************/
 /***************************************************************************/
+
+void check_row(intrsctn* is, int n_i) {
+    for(size_t i = 0; i < n_i-1; i++)
+    {
+        assert(is[i].east == is[i+1].west);
+    }
+}
+void check_col(intrsctn* is, int n_i) {
+    for(size_t i = 0; i < n_i-1; i++)
+    {
+        assert(is[i].soth == is[i+SIDE_LENGTH].nrth);
+    }
+}
+
+// FOR TESTING ONLY
+// CHECKS IF GRID IS BUILT PROPERLY
+void check_grid(unsigned int rpr, intrsctn* is, 
+        street* s_ew, street* s_ns, street* g_n_ns, street* g_s_ns){
+    for(size_t i = 0; i < rpr; i++)
+    {
+        check_row(&is[i*SIDE_LENGTH], SIDE_LENGTH);
+    }
+
+    for(size_t i = 0; i < SIDE_LENGTH; i++)
+    {
+        check_col(&is[i], rpr);
+    }
+    
+    
+}
