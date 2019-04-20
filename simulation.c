@@ -7,6 +7,7 @@
 #include<string.h>
 #include<errno.h>
 #include<math.h>
+#include <stddef.h>
 
 #include "clcg4.h"
 #include<mpi.h>
@@ -99,7 +100,15 @@ int compare_eloc(car* c, unsigned long col, unsigned long row, unsigned short id
     return c->e_col == col && c->e_row == row && c->e_idx == idx;
 }
 
-void transfer(car* to_transfer, car* to_receive, int mpi_myrank);
+MPI_Datatype mkcartype();
+
+void pack_transfer(car* tt_n, street* gs_n, 
+        car* tt_s, street* gs_s);
+void unpack_transfer(car* tr_n, street* gs_n,
+        car* tr_s, street* gs_s);
+
+void transfer(car* tt_n, car* tr_n, car* tt_s, car* tr_s, int mpi_myrank, int mpi_commsize, 
+        MPI_Datatype t_type);
 
 
 /***************************************************************************/
@@ -142,8 +151,12 @@ int main(int argc, char *argv[])
     intrsctn* intrsctn_now = calloc(rpr*SIDE_LENGTH, sizeof(intrsctn));
     intrsctn* intrsctn_nxt = calloc(rpr*SIDE_LENGTH, sizeof(intrsctn));
     // ghost cars to transfer via mpi
-    car* to_transfer = calloc(SIDE_LENGTH, sizeof(car));
-    car* to_receive = calloc(SIDE_LENGTH, sizeof(car));
+    car* to_transfer_nrth = calloc(SIDE_LENGTH, sizeof(car));
+    car* to_transfer_soth = calloc(SIDE_LENGTH, sizeof(car));
+    car* to_receive_nrth = calloc(SIDE_LENGTH, sizeof(car));
+    car* to_receive_soth = calloc(SIDE_LENGTH, sizeof(car));
+
+    MPI_Datatype mpi_car_type = mkcartype();
 
 
     mk_grid(rpr, intrsctn_now, streets_ns_now, streets_ew_now,
@@ -186,9 +199,15 @@ int main(int argc, char *argv[])
     // for loop of ticks
     // send and receive (blocking)
     // NEED TO SEND THE FIRST SLOT GOING SOUTH TO THE SOUTH
-    // NEED TO RECEIVE THE FIRST SLOT GOING SOUTH TO THE NORTH
     // NEED TO SEND THE FIRST SLOT GOING NORTH TO THE NORTH
+    pack_transfer(to_transfer_nrth, ghost_ns_nrth_now,
+            to_transfer_soth, ghost_ns_soth_now);
+    transfer(to_transfer_nrth, to_receive_nrth, to_transfer_soth, to_receive_soth,
+            mpi_myrank, mpi_commsize, mpi_car_type);
+    // NEED TO RECEIVE THE FIRST SLOT GOING SOUTH TO THE NORTH
     // NEED TO RECEIVE THE FIRST SLOT GOING NORTH TO THE SOUTH
+    unpack_transfer(to_receive_nrth, ghost_ns_nrth_now,
+            to_receive_soth, ghost_ns_soth_now);
     // update streets
     // run intersections
 
@@ -356,4 +375,65 @@ void generate_cars(unsigned long n, unsigned long glbl_row_idx, street* strts,
             }
         }
     }
+}
+
+MPI_Datatype mkcartype(){
+        // mpi struct
+    const int n_items = 6;
+    int blocklengths[6] = {1,1,1,1,1,1};
+    MPI_Datatype types[6] = {MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, 
+                            MPI_UNSIGNED_SHORT, MPI_UNSIGNED_LONG,
+                            MPI_UNSIGNED_LONG, MPI_UNSIGNED_SHORT};
+    MPI_Datatype mpi_car_type;
+    MPI_Aint offsets[6];
+    offsets[0] = offsetof(car, s_col);
+    offsets[1] = offsetof(car, s_row);
+    offsets[2] = offsetof(car, s_idx);
+    offsets[3] = offsetof(car, e_col);
+    offsets[4] = offsetof(car, e_row);
+    offsets[5] = offsetof(car, e_idx);
+    MPI_Type_create_struct(n_items, blocklengths, offsets, types, &mpi_car_type);
+    MPI_Type_commit(&mpi_car_type);
+    return mpi_car_type;
+}
+
+void pack_transfer(car* tt_n, street* gs_n, 
+        car* tt_s, street* gs_s){
+    for(size_t i = 0; i < SIDE_LENGTH; i++)
+    {
+        memcpy(&tt_n[i], &gs_n[i].go_wn[i], sizeof(car));
+        memcpy(&tt_s[i], &gs_s[i].go_es[i], sizeof(car));
+    }
+    
+
+}
+void unpack_transfer(car* tr_n, street* gs_n,
+        car* tr_s, street* gs_s){
+    for(size_t i = 0; i < SIDE_LENGTH; i++)
+    {
+        memcpy(&tr_n[i], &gs_n[i].go_es[i], sizeof(car));
+        memcpy(&tr_s[i], &gs_s[i].go_wn[i], sizeof(car));
+    }
+}
+
+void transfer(car* tt_n, car* tr_n, car* tt_s, car* tr_s, int mpi_myrank, int mpi_commsize,
+        MPI_Datatype t_type){
+    MPI_Request nrth;
+    MPI_Request soth;
+    MPI_Request request;
+    if(mpi_myrank != 0) {
+        MPI_Irecv(tr_n, SIDE_LENGTH, t_type, mpi_myrank-1, 0, MPI_COMM_WORLD, &nrth);
+    }
+    if(mpi_myrank != mpi_commsize -1) {
+        MPI_Irecv(tr_s, SIDE_LENGTH, t_type, mpi_myrank+1, 1, MPI_COMM_WORLD, &soth);
+    }
+    if(mpi_myrank != mpi_commsize -1) {
+        MPI_Isend(tt_s, SIDE_LENGTH, t_type, mpi_myrank+1, 0, MPI_COMM_WORLD, &request);
+    }
+    if(mpi_myrank != 0) {
+        MPI_Isend(tt_n, SIDE_LENGTH, t_type, mpi_myrank-1, 1, MPI_COMM_WORLD, &request);
+    }
+
+    MPI_Wait(&nrth, MPI_STATUS_IGNORE);
+    MPI_Wait(&soth, MPI_STATUS_IGNORE);
 }
