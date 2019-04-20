@@ -41,16 +41,21 @@
 
 
 // denotes a place on the grid with column #, row # and which part of the street
-typedef struct location {
-    unsigned long col;
-    unsigned long row;
-    unsigned short idx;
-} loc;
+// typedef struct location {
+//     unsigned long col;
+//     unsigned long row;
+//     unsigned short idx;
+// } loc;
 
 // denotes a car
+// s stands for start e stands for end
 typedef struct vehicle {
-    loc* start;
-    loc* end;
+    unsigned long s_col;
+    unsigned long s_row;
+    unsigned short s_idx;
+    unsigned long e_col;
+    unsigned long e_row;
+    unsigned short e_idx;
 } car;
 
 typedef struct streets {
@@ -87,9 +92,14 @@ void mk_grid(unsigned int rpr, intrsctn* is, street* s_ns, street* s_ew,
 void generate_cars(unsigned long n, unsigned long glbl_row_idx, street* strts, 
         int row_or_col, float proportion);
 
-int compare_loc(loc* l, unsigned long col, unsigned long row, unsigned short idx) {
-    return l->col == col && l->row == row && l->idx == idx;
+int compare_sloc(car* c, unsigned long col, unsigned long row, unsigned short idx) {
+    return c->s_col == col && c->s_row == row && c->s_idx == idx;
 }
+int compare_eloc(car* c, unsigned long col, unsigned long row, unsigned short idx) {
+    return c->e_col == col && c->e_row == row && c->e_idx == idx;
+}
+
+void transfer(car* to_transfer, car* to_receive, int mpi_myrank);
 
 
 /***************************************************************************/
@@ -124,43 +134,73 @@ int main(int argc, char *argv[])
     street* streets_ns_nxt = calloc((rpr-1)*SIDE_LENGTH, sizeof(street));
     // ghost streets
     // these streets are the ones in the middle of the rectangle
-    street* ghost_ns_nrth = calloc(SIDE_LENGTH, sizeof(street));
-    street* ghost_ns_soth = calloc(SIDE_LENGTH, sizeof(street));
+    street* ghost_ns_nrth_now = calloc(SIDE_LENGTH, sizeof(street));
+    street* ghost_ns_soth_now = calloc(SIDE_LENGTH, sizeof(street));
+    street* ghost_ns_nrth_nxt = calloc(SIDE_LENGTH, sizeof(street));
+    street* ghost_ns_soth_nxt = calloc(SIDE_LENGTH, sizeof(street));
     // array of intersections
     intrsctn* intrsctn_now = calloc(rpr*SIDE_LENGTH, sizeof(intrsctn));
     intrsctn* intrsctn_nxt = calloc(rpr*SIDE_LENGTH, sizeof(intrsctn));
+    // ghost cars to transfer via mpi
+    car* to_transfer = calloc(SIDE_LENGTH, sizeof(car));
+    car* to_receive = calloc(SIDE_LENGTH, sizeof(car));
+
 
     mk_grid(rpr, intrsctn_now, streets_ns_now, streets_ew_now,
-            ghost_ns_nrth, ghost_ns_soth, mpi_myrank, mpi_commsize);
+            ghost_ns_nrth_now, ghost_ns_soth_now, mpi_myrank, mpi_commsize);
     mk_grid(rpr, intrsctn_nxt, streets_ns_nxt, streets_ew_nxt,
-            ghost_ns_nrth, ghost_ns_soth, mpi_myrank, mpi_commsize);
+            ghost_ns_nrth_nxt, ghost_ns_soth_nxt, mpi_myrank, mpi_commsize);
 
 
 // check if grids are valid
 #ifdef DEBUG
     check_grid(rpr, intrsctn_now, streets_ew_now, streets_ns_now, 
-            ghost_ns_nrth, ghost_ns_soth);
+            ghost_ns_nrth_now, ghost_ns_soth_nxt);
     check_grid(rpr, intrsctn_nxt, streets_ew_nxt, streets_ns_nxt, 
-            ghost_ns_nrth, ghost_ns_soth);
+            ghost_ns_nrth_nxt, ghost_ns_soth_nxt);
 #endif
     // do e/w
     generate_cars(rpr*(SIDE_LENGTH-1), glbl_index, streets_ew_now, 0, proportion);
     // do n/s
     generate_cars((rpr-1)*(SIDE_LENGTH), glbl_index+1, streets_ns_now, 1, proportion);    
+    // do ghost this will be a duplicate just for easy
+    if(mpi_myrank != mpi_commsize-1) {
+        generate_cars(SIDE_LENGTH, glbl_index+2*rpr-1, ghost_ns_soth_now, 1, proportion);
+    }
+    if(mpi_myrank != 0) {
+        generate_cars(SIDE_LENGTH, glbl_index-1, ghost_ns_nrth_now, 1, proportion);
+    }
 #ifdef DEBUG
     check_cars(rpr*(SIDE_LENGTH-1), glbl_index, streets_ew_now, 0); 
     check_cars((rpr-1)*(SIDE_LENGTH), glbl_index+1, streets_ns_now, 1);
+    if(mpi_myrank != 0) {
+        check_cars(SIDE_LENGTH, glbl_index-1, ghost_ns_nrth_now, 1);
+    }
+    if(mpi_myrank != mpi_commsize-1) {
+        check_cars(SIDE_LENGTH, glbl_index+2*rpr-1, ghost_ns_soth_now, 1);
+    }
 #endif
     
     MPI_Barrier( MPI_COMM_WORLD );
+
+    // for loop of ticks
+    // send and receive (blocking)
+    // NEED TO SEND THE FIRST SLOT GOING SOUTH TO THE SOUTH
+    // NEED TO RECEIVE THE FIRST SLOT GOING SOUTH TO THE NORTH
+    // NEED TO SEND THE FIRST SLOT GOING NORTH TO THE NORTH
+    // NEED TO RECEIVE THE FIRST SLOT GOING NORTH TO THE SOUTH
+    // update streets
+    // run intersections
 
     // frees
     free(streets_ew_now);
     free(streets_ew_nxt);
     free(streets_ns_now);
     free(streets_ns_nxt);
-    free(ghost_ns_nrth);
-    free(ghost_ns_soth);
+    free(ghost_ns_nrth_now);
+    free(ghost_ns_soth_now);
+    free(ghost_ns_nrth_nxt);
+    free(ghost_ns_soth_nxt);
     free(intrsctn_now);
     free(intrsctn_nxt);
     MPI_Finalize();
@@ -215,10 +255,10 @@ void check_cars(unsigned long n, unsigned long glbl_row_idx, street* strts,
             assert(!strts[i].go_es[j] || !strts[i].go_wn[j]);
             // if a street has a car it should be at the starting location
             assert(!strts[i].go_es[j] || (strts[i].go_es[j] && 
-                    compare_loc(strts[i].go_es[j]->start, 
+                    compare_sloc(strts[i].go_es[j], 
                     col, row, j)));
             assert(!strts[i].go_wn[j] || (strts[i].go_wn[j] && 
-                    compare_loc(strts[i].go_wn[j]->start, 
+                    compare_sloc(strts[i].go_wn[j], 
                     col, row, j)));
             
         }
@@ -297,22 +337,18 @@ void generate_cars(unsigned long n, unsigned long glbl_row_idx, street* strts,
         for(size_t j = 0; j < ROAD_CAP; j++) {
             if(GenVal(row) < proportion) {
                 // start location
-                loc* strt = calloc(1, sizeof(loc));
-                strt->col = col;
-                strt->row = row;
-                strt->idx = j;
+                car* c = calloc(1, sizeof(car));
+                c->s_col = col;
+                c->s_row = row;
+                c->s_idx = j;
 
                 // end location (non-unique)
-                loc* _end = calloc(1, sizeof(loc));
-                _end->col = (unsigned long) GenVal(row)*(2*SIDE_LENGTH-1);
-                _end->row = (unsigned long) GenVal(row)*(2*SIDE_LENGTH-1);
-                _end->idx = (int) GenVal(row)*(ROAD_CAP);
-                car* c = calloc(1, sizeof(car));
-                c->start = strt;
-                c->end = _end;
+                c->e_col = (unsigned long) GenVal(row)*(2*SIDE_LENGTH-1);
+                c->e_row = (unsigned long) GenVal(row)*(2*SIDE_LENGTH-1);
+                c->e_idx = (int) GenVal(row)*(ROAD_CAP);
 
-                if ((_end->col >= strt->col && !row_or_col) ||
-                        (_end->row >= strt->row && row_or_col)) {
+                if ((c->e_col >= c->s_col && !row_or_col) ||
+                        (c->e_row >= c->s_row && row_or_col)) {
                     strts[i].go_es[j] = c;
                 }else{
                     strts[i].go_wn[j] = c;
