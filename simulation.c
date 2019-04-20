@@ -29,7 +29,7 @@
 #ifdef BGQ
 #define SIDE_LENGTH 32768
 #else
-#define SIDE_LENGTH 128
+#define SIDE_LENGTH 8
 #endif
 
 
@@ -42,9 +42,9 @@
 
 // denotes a place on the grid with column #, row # and which part of the street
 typedef struct location {
-    unsigned int col;
-    unsigned int row;
-    unsigned int idx;
+    unsigned long col;
+    unsigned long row;
+    unsigned short idx;
 } loc;
 
 // denotes a car
@@ -78,7 +78,11 @@ typedef struct intrsctns {
 void check_grid(unsigned int rpr, intrsctn* is, 
         street* s_ew, street* s_ns, street* g_n_ns, street* g_s_ns);
 
-void print_grid();
+void mk_grid(unsigned int rpr, intrsctn* is, street* s_ns, street* s_ew, 
+        street* g_ns_n, street* g_ns_s, int mpi_myrank, int mpi_commsize);
+
+void generate_cars(unsigned long n, unsigned long glbl_row_idx, street* strts, 
+        int row_or_col, float proportion);
 
 /***************************************************************************/
 /* Function: Main **********************************************************/
@@ -98,7 +102,7 @@ int main(int argc, char *argv[])
     float proportion = 0.25;
     unsigned long long capacity = 2*(SIDE_LENGTH-1)*(SIDE_LENGTH)*ROAD_CAP;
     unsigned long long n_cars = (unsigned long long) (((long double) proportion)*capacity);
-    unsigned int glbl_index = rpr*mpi_myrank;
+    unsigned int glbl_index = 2*rpr*mpi_myrank;
     InitDefault();
 
     // To save space even ticks will be computed in now variables and odd
@@ -106,69 +110,23 @@ int main(int argc, char *argv[])
     // The pointers will switch after every tick
     
     // array of streets
-    street* streets_ew_now = malloc((rpr)*(SIDE_LENGTH-1)*sizeof(street));
-    street* streets_ew_nxt = malloc((rpr)*(SIDE_LENGTH-1)*sizeof(street));
-    street* streets_ns_now = malloc((rpr-1)*SIDE_LENGTH*sizeof(street));
-    street* streets_ns_nxt = malloc((rpr-1)*SIDE_LENGTH*sizeof(street));
+    street* streets_ew_now = calloc((rpr)*(SIDE_LENGTH-1), sizeof(street));
+    street* streets_ew_nxt = calloc((rpr)*(SIDE_LENGTH-1), sizeof(street));
+    street* streets_ns_now = calloc((rpr-1)*SIDE_LENGTH, sizeof(street));
+    street* streets_ns_nxt = calloc((rpr-1)*SIDE_LENGTH, sizeof(street));
     // ghost streets
     // these streets are the ones in the middle of the rectangle
-    street* ghost_ns_nrth = malloc(SIDE_LENGTH*sizeof(street));
-    street* ghost_ns_soth = malloc(SIDE_LENGTH*sizeof(street));
+    street* ghost_ns_nrth = calloc(SIDE_LENGTH, sizeof(street));
+    street* ghost_ns_soth = calloc(SIDE_LENGTH, sizeof(street));
     // array of intersections
-    intrsctn* intrsctn_now = malloc(rpr*SIDE_LENGTH*sizeof(intrsctn));
-    intrsctn* intrsctn_nxt = malloc(rpr*SIDE_LENGTH*sizeof(intrsctn));
+    intrsctn* intrsctn_now = calloc(rpr*SIDE_LENGTH, sizeof(intrsctn));
+    intrsctn* intrsctn_nxt = calloc(rpr*SIDE_LENGTH, sizeof(intrsctn));
 
-    // connect up the intersections
-    // TO DO: check to see if it works and repeat for next ones
-    for(size_t i = 0; i < rpr*SIDE_LENGTH; i++)
-    {
-        // if (mpi_myrank == 0) {
-        //     printf("%lu\n", i);
-        // }
-        
-        if(i/SIDE_LENGTH == 0) {
-            // if touching north side
-            if(mpi_myrank != 0) {
-                intrsctn_now[i].nrth = &ghost_ns_nrth[i];
-                intrsctn_nxt[i].nrth = &ghost_ns_nrth[i];
-            } else {
-                intrsctn_now[i].nrth = NULL;
-                intrsctn_nxt[i].nrth = NULL;
-            }
-        } else {
-            intrsctn_now[i].nrth = &streets_ns_now[i-SIDE_LENGTH];
-            intrsctn_nxt[i].nrth = &streets_ns_nxt[i-SIDE_LENGTH];
-        }
-        if(i/SIDE_LENGTH == SIDE_LENGTH-1) {
-            // if touching south side
-            if(mpi_myrank != mpi_commsize-1) {
-                intrsctn_now[i].soth = &ghost_ns_soth[i%SIDE_LENGTH];
-                intrsctn_nxt[i].soth = &ghost_ns_soth[i%SIDE_LENGTH];
-            } else {
-                intrsctn_now[i].soth = NULL;
-                intrsctn_nxt[i].soth = NULL;
-            }
-        } else {
-            intrsctn_now[i].soth = &streets_ns_now[i];
-            intrsctn_nxt[i].soth = &streets_ns_nxt[i];
-        }
-        if(i%SIDE_LENGTH == SIDE_LENGTH-1) {
-            // if touching east side
-            intrsctn_now[i].east = NULL;
-            intrsctn_nxt[i].east = NULL;
-        } else {
-            intrsctn_now[i].east = &streets_ew_now[i-i/SIDE_LENGTH];
-            intrsctn_nxt[i].east = &streets_ew_nxt[i-i/SIDE_LENGTH];
-        }
-        if(i%SIDE_LENGTH == 0) {
-            // if touching west side
-            intrsctn_now[i].west = NULL;
-            intrsctn_nxt[i].west = NULL;
-        } else {
-            intrsctn_now[i].west = &streets_ew_now[i-1-i/SIDE_LENGTH];
-            intrsctn_nxt[i].west = &streets_ew_nxt[i-1-i/SIDE_LENGTH];
-        }
-    }
+    mk_grid(rpr, intrsctn_now, streets_ns_now, streets_ew_now,
+            ghost_ns_nrth, ghost_ns_soth, mpi_myrank, mpi_commsize);
+    mk_grid(rpr, intrsctn_nxt, streets_ns_nxt, streets_ew_nxt,
+            ghost_ns_nrth, ghost_ns_soth, mpi_myrank, mpi_commsize);
+
 
 // check if grids are valid
 #ifdef DEBUG
@@ -177,93 +135,10 @@ int main(int argc, char *argv[])
     check_grid(rpr, intrsctn_nxt, streets_ew_nxt, streets_ns_nxt, 
             ghost_ns_nrth, ghost_ns_soth);
 #endif
-
-    // initial cars
-    // each car will have a starting point and an end point
-    // each row will use its corresponding rng number generator
-    // ew rows use generators 0, 2, 4, etc
-    // ns rows use generators 1, 3, 5, etc
-    // each slot will have a threshold chance to have a starting car
-    // then it will pick a random slot on the grid to finish at
-    // DUE to the very large nature of the possible number of slots
-    // 4 random numbers will be used to define a finished location
-    //  1 for on e/w or n/s
-    //  1 for row
-    //  1 for column
-    //  1 for street position
-
-    // generate east_west cars
-    int idx;
-    int row;
-    int col;
-    for(size_t i = 0; i < rpr*(SIDE_LENGTH-1); i++)
-    {
-        idx = glbl_index + i/(SIDE_LENGTH-1);
-        row = i/(SIDE_LENGTH-1);
-        col = i%(SIDE_LENGTH-1);
-        for(size_t j = 0; j < ROAD_CAP; j++) {
-            if(GenVal(idx) < proportion) {
-                // start location
-                loc* strt = malloc(sizeof(loc));
-                strt->col = col;
-                strt->row = row;
-                strt->idx = j;
-
-                // end location (non-unique)
-                loc* _end = malloc(sizeof(loc));
-                _end->col = (int) GenVal(idx)*(SIDE_LENGTH-1);
-                _end->row = (int) GenVal(idx)*(SIDE_LENGTH-1);
-                _end->row = (int) GenVal(idx)*(ROAD_CAP);
-                car* c = malloc(sizeof(car));
-                c->start = strt;
-                c->end = _end;
-
-                // if it needs to go right or left
-                if (_end->col >= strt->col) {
-                    streets_ew_now[i].go_es[j] = c;
-                }else{
-                    streets_ew_now[i].go_wn[j] = c;
-                }
-                
-            } 
-        }
-    }
-
-    // generate north_south cars
-    for(size_t i = 0; i < (rpr-1)*(SIDE_LENGTH); i++)
-    {
-        idx = glbl_index + i/(SIDE_LENGTH);
-        row = i/(SIDE_LENGTH);
-        col = i%(SIDE_LENGTH);
-        for(size_t j = 0; j < ROAD_CAP; j++) {
-            if(GenVal(idx) < proportion) {
-                // start location
-                loc* strt = malloc(sizeof(loc));
-                strt->col = col;
-                strt->row = row;
-                strt->idx = j;
-
-                // end location (non-unique)
-                loc* _end = malloc(sizeof(loc));
-                _end->col = (int) GenVal(idx)*(SIDE_LENGTH-1);
-                _end->row = (int) GenVal(idx)*(SIDE_LENGTH-1);
-                _end->row = (int) GenVal(idx)*(ROAD_CAP);
-                car* c = malloc(sizeof(car));
-                c->start = strt;
-                c->end = _end;
-
-                // if it needs to go right or left
-                if (_end->row >= strt->row) {
-                    streets_ns_now[i].go_es[j] = c;
-                }else{
-                    streets_ns_now[i].go_wn[j] = c;
-                }
-                
-            } 
-        }
-    }
-    
-    
+    // do e/w
+    generate_cars(rpr*(SIDE_LENGTH-1), mpi_myrank*rpr, streets_ew_now, 0, proportion);
+    // do n/s
+    generate_cars((rpr-1)*(SIDE_LENGTH), mpi_myrank*rpr, streets_ns_now, 1, proportion);    
 
     
     MPI_Barrier( MPI_COMM_WORLD );
@@ -313,4 +188,100 @@ void check_grid(unsigned int rpr, intrsctn* is,
     }
     
     
+}
+
+void mk_grid(unsigned int rpr, intrsctn* is, street* s_ns, street* s_ew, 
+        street* g_ns_n, street* g_ns_s, int mpi_myrank, int mpi_commsize){
+    // connect up the intersections
+    for(size_t i = 0; i < rpr*SIDE_LENGTH; i++)
+    {
+        // if (mpi_myrank == 0) {
+        //     printf("%lu\n", i);
+        // }
+        
+        if(i/SIDE_LENGTH == 0) {
+            // if touching north side
+            if(mpi_myrank != 0) {
+                is[i].nrth = &g_ns_n[i];
+            } else {
+                is[i].nrth = NULL;
+            }
+        } else {
+            is[i].nrth = &s_ns[i-SIDE_LENGTH];
+        }
+        if(i/SIDE_LENGTH == SIDE_LENGTH-1) {
+            // if touching south side
+            if(mpi_myrank != mpi_commsize-1) {
+                is[i].soth = &g_ns_s[i%SIDE_LENGTH];
+            } else {
+                is[i].soth = NULL;
+            }
+        } else {
+            is[i].soth = &s_ns[i];
+        }
+        if(i%SIDE_LENGTH == SIDE_LENGTH-1) {
+            // if touching east side
+            is[i].east = NULL;
+        } else {
+            is[i].east = &s_ew[i-i/SIDE_LENGTH];
+        }
+        if(i%SIDE_LENGTH == 0) {
+            // if touching west side
+            is[i].west = NULL;
+        } else {
+            is[i].west = &s_ew[i-1-i/SIDE_LENGTH];
+        }
+    }
+}
+
+void generate_cars(unsigned long n, unsigned long glbl_row_idx, street* strts, 
+        int row_or_col, float proportion){
+    // initial cars
+    // each car will have a starting point and an end point
+    // each row will use its corresponding rng number generator
+    // ew rows use generators 0, 2, 4, etc
+    // ns rows use generators 1, 3, 5, etc
+    // each slot will have a threshold chance to have a starting car
+    // then it will pick a random slot on the grid to finish at
+    // DUE to the very large nature of the possible number of slots
+    // 4 random numbers will be used to define a finished location
+    //  1 for on e/w or n/s
+    //  1 for row
+    //  1 for column
+    //  1 for street position
+
+    
+    // for row_or_col, row=0, col=1
+    unsigned long idx, row, col;
+    for(size_t i =0; i < n; i++) {
+        // find current global positions
+        idx = glbl_row_idx + 2*(i/(SIDE_LENGTH-(!row_or_col)));
+        row = 2*(i/(SIDE_LENGTH-!row_or_col)) + row_or_col;
+        col = 2*(i%(SIDE_LENGTH-!row_or_col)) + !row_or_col;
+        for(size_t j = 0; j < ROAD_CAP; j++) {
+            if(GenVal(idx) < proportion) {
+                // start location
+                loc* strt = calloc(1, sizeof(loc));
+                strt->col = col;
+                strt->row = row;
+                strt->idx = j;
+
+                // end location (non-unique)
+                loc* _end = calloc(1, sizeof(loc));
+                _end->col = (unsigned long) GenVal(idx)*(2*SIDE_LENGTH-1);
+                _end->row = (unsigned long) GenVal(idx)*(2*SIDE_LENGTH-1);
+                _end->row = (int) GenVal(idx)*(ROAD_CAP);
+                car* c = calloc(1, sizeof(car));
+                c->start = strt;
+                c->end = _end;
+
+                if ((_end->col >= strt->col && !row_or_col) ||
+                        (_end->row >= strt->row && row_or_col)) {
+                    strts[i].go_es[j] = c;
+                }else{
+                    strts[i].go_wn[j] = c;
+                }
+            }
+        }
+    }
 }
