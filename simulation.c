@@ -78,11 +78,19 @@ typedef struct intrsctns {
 void check_grid(unsigned int rpr, intrsctn* is, 
         street* s_ew, street* s_ns, street* g_n_ns, street* g_s_ns);
 
+void check_cars(unsigned long n, unsigned long glbl_row_idx, street* strts, 
+        int row_or_col);
+
 void mk_grid(unsigned int rpr, intrsctn* is, street* s_ns, street* s_ew, 
         street* g_ns_n, street* g_ns_s, int mpi_myrank, int mpi_commsize);
 
 void generate_cars(unsigned long n, unsigned long glbl_row_idx, street* strts, 
         int row_or_col, float proportion);
+
+int compare_loc(loc* l, unsigned long col, unsigned long row, unsigned short idx) {
+    return l->col == col && l->row == row && l->idx == idx;
+}
+
 
 /***************************************************************************/
 /* Function: Main **********************************************************/
@@ -99,7 +107,7 @@ int main(int argc, char *argv[])
     // constants 
     // Rows per rank
     unsigned int rpr = SIDE_LENGTH/mpi_commsize;
-    float proportion = 0.25;
+    float proportion = 1;
     unsigned long long capacity = 2*(SIDE_LENGTH-1)*(SIDE_LENGTH)*ROAD_CAP;
     unsigned long long n_cars = (unsigned long long) (((long double) proportion)*capacity);
     unsigned int glbl_index = 2*rpr*mpi_myrank;
@@ -136,10 +144,13 @@ int main(int argc, char *argv[])
             ghost_ns_nrth, ghost_ns_soth);
 #endif
     // do e/w
-    generate_cars(rpr*(SIDE_LENGTH-1), mpi_myrank*rpr, streets_ew_now, 0, proportion);
+    generate_cars(rpr*(SIDE_LENGTH-1), glbl_index, streets_ew_now, 0, proportion);
     // do n/s
-    generate_cars((rpr-1)*(SIDE_LENGTH), mpi_myrank*rpr, streets_ns_now, 1, proportion);    
-
+    generate_cars((rpr-1)*(SIDE_LENGTH), glbl_index+1, streets_ns_now, 1, proportion);    
+#ifdef DEBUG
+    check_cars(rpr*(SIDE_LENGTH-1), glbl_index, streets_ew_now, 0); 
+    check_cars((rpr-1)*(SIDE_LENGTH), glbl_index+1, streets_ns_now, 1);
+#endif
     
     MPI_Barrier( MPI_COMM_WORLD );
 
@@ -187,6 +198,32 @@ void check_grid(unsigned int rpr, intrsctn* is,
         check_col(&is[i], rpr);
     }
     
+    
+}
+
+void check_cars(unsigned long n, unsigned long glbl_row_idx, street* strts, 
+        int row_or_col){
+    unsigned long row, col;
+    for(size_t i = 0; i < n; i++)
+    {
+        // find current global positions
+        row = glbl_row_idx + 2*(i/(SIDE_LENGTH-(!row_or_col)));
+        col = 2*(i%(SIDE_LENGTH-!row_or_col)) + !row_or_col;
+        for(size_t j = 0; j < ROAD_CAP; j++)
+        {
+            // only one side of street should be full            
+            assert(!strts[i].go_es[j] || !strts[i].go_wn[j]);
+            // if a street has a car it should be at the starting location
+            assert(!strts[i].go_es[j] || (strts[i].go_es[j] && 
+                    compare_loc(strts[i].go_es[j]->start, 
+                    col, row, j)));
+            assert(!strts[i].go_wn[j] || (strts[i].go_wn[j] && 
+                    compare_loc(strts[i].go_wn[j]->start, 
+                    col, row, j)));
+            
+        }
+        
+    }
     
 }
 
@@ -252,14 +289,13 @@ void generate_cars(unsigned long n, unsigned long glbl_row_idx, street* strts,
 
     
     // for row_or_col, row=0, col=1
-    unsigned long idx, row, col;
+    unsigned long row, col;
     for(size_t i =0; i < n; i++) {
         // find current global positions
-        idx = glbl_row_idx + 2*(i/(SIDE_LENGTH-(!row_or_col)));
-        row = 2*(i/(SIDE_LENGTH-!row_or_col)) + row_or_col;
+        row = glbl_row_idx + 2*(i/(SIDE_LENGTH-(!row_or_col)));
         col = 2*(i%(SIDE_LENGTH-!row_or_col)) + !row_or_col;
         for(size_t j = 0; j < ROAD_CAP; j++) {
-            if(GenVal(idx) < proportion) {
+            if(GenVal(row) < proportion) {
                 // start location
                 loc* strt = calloc(1, sizeof(loc));
                 strt->col = col;
@@ -268,9 +304,9 @@ void generate_cars(unsigned long n, unsigned long glbl_row_idx, street* strts,
 
                 // end location (non-unique)
                 loc* _end = calloc(1, sizeof(loc));
-                _end->col = (unsigned long) GenVal(idx)*(2*SIDE_LENGTH-1);
-                _end->row = (unsigned long) GenVal(idx)*(2*SIDE_LENGTH-1);
-                _end->row = (int) GenVal(idx)*(ROAD_CAP);
+                _end->col = (unsigned long) GenVal(row)*(2*SIDE_LENGTH-1);
+                _end->row = (unsigned long) GenVal(row)*(2*SIDE_LENGTH-1);
+                _end->idx = (int) GenVal(row)*(ROAD_CAP);
                 car* c = calloc(1, sizeof(car));
                 c->start = strt;
                 c->end = _end;
