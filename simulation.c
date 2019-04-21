@@ -96,8 +96,8 @@ void generate_cars(unsigned long n, unsigned long glbl_row_idx, street* strts,
 int compare_sloc(car* c, unsigned long col, unsigned long row, unsigned short idx) {
     return c->s_col == col && c->s_row == row && c->s_idx == idx;
 }
-int compare_eloc(car* c, unsigned long col, unsigned long row, unsigned short idx) {
-    return c->e_col == col && c->e_row == row && c->e_idx == idx;
+unsigned long dist_eloc(car* _c, unsigned long col, unsigned long row) {
+    return abs(_c->e_col - col) + abs(_c->e_row - row);
 }
 
 MPI_Datatype mkcartype();
@@ -110,6 +110,9 @@ void unpack_transfer(car* tr_n, street* gs_n,
 void transfer(car* tt_n, car* tr_n, car* tt_s, car* tr_s, int mpi_myrank, int mpi_commsize, 
         MPI_Datatype t_type);
 
+unsigned long total_grid_dist_to_travel(unsigned long glbl_row_idx, street* sts, unsigned int n);
+
+unsigned long total_street_dist_to_travel();
 
 /***************************************************************************/
 /* Function: Main **********************************************************/
@@ -195,6 +198,11 @@ int main(int argc, char *argv[])
 #endif
     
     MPI_Barrier( MPI_COMM_WORLD );
+
+    unsigned long dist_left = 
+            total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr) +
+            total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
+    printf("Rank %d: Tick %d: Distance left is %lu\n", mpi_myrank, 0, dist_left);
 
     // for loop of ticks
     // send and receive (blocking)
@@ -355,16 +363,17 @@ void generate_cars(unsigned long n, unsigned long glbl_row_idx, street* strts,
         col = 2*(i%(SIDE_LENGTH-!row_or_col)) + !row_or_col;
         for(size_t j = 0; j < ROAD_CAP; j++) {
             if(GenVal(row) < proportion) {
+
                 // start location
                 car* c = calloc(1, sizeof(car));
                 c->s_col = col;
                 c->s_row = row;
-                c->s_idx = j;
+                c->s_idx = (unsigned short) j;
 
                 // end location (non-unique)
-                c->e_col = (unsigned long) GenVal(row)*(2*SIDE_LENGTH-1);
-                c->e_row = (unsigned long) GenVal(row)*(2*SIDE_LENGTH-1);
-                c->e_idx = (int) GenVal(row)*(ROAD_CAP);
+                c->e_col = (unsigned long) (GenVal(row)*(2*SIDE_LENGTH-1));
+                c->e_row = (unsigned long) (GenVal(row)*(2*SIDE_LENGTH-1));
+                c->e_idx = (int) (GenVal(row)*(ROAD_CAP));
 
                 if ((c->e_col >= c->s_col && !row_or_col) ||
                         (c->e_row >= c->s_row && row_or_col)) {
@@ -399,10 +408,27 @@ MPI_Datatype mkcartype(){
 
 void pack_transfer(car* tt_n, street* gs_n, 
         car* tt_s, street* gs_s){
+    car sample;
+    sample.s_col = 0;
+    sample.s_row = 0;
+    sample.s_idx = 0;
+    sample.e_col = 0;
+    sample.e_row = 0;
+    sample.e_idx = 0;
     for(size_t i = 0; i < SIDE_LENGTH; i++)
     {
-        memcpy(&tt_n[i], &gs_n[i].go_wn[i], sizeof(car));
-        memcpy(&tt_s[i], &gs_s[i].go_es[i], sizeof(car));
+        if (gs_n[i].go_wn[0]) {
+            memcpy(&(tt_n[i]), gs_n[i].go_wn[0], sizeof(car));
+        }
+        else{
+            memcpy(&(tt_n[i]), &sample, sizeof(car));
+        }
+        if(gs_s[i].go_es[0]){
+            memcpy(&(tt_s[i]), gs_s[i].go_es[0], sizeof(car));
+        }
+        else {
+            memcpy(&(tt_s[i]), &sample, sizeof(car));
+        }
     }
     
 
@@ -411,8 +437,10 @@ void unpack_transfer(car* tr_n, street* gs_n,
         car* tr_s, street* gs_s){
     for(size_t i = 0; i < SIDE_LENGTH; i++)
     {
-        memcpy(&tr_n[i], &gs_n[i].go_es[i], sizeof(car));
-        memcpy(&tr_s[i], &gs_s[i].go_wn[i], sizeof(car));
+        gs_n[i].go_es[0] = calloc(1, sizeof(car));
+        memcpy(gs_n[i].go_es[0], &tr_n[i], sizeof(car));
+        gs_s[i].go_wn[0] = calloc(1, sizeof(car));
+        memcpy(gs_s[i].go_wn[0], &tr_s[i], sizeof(car));
     }
 }
 
@@ -421,19 +449,55 @@ void transfer(car* tt_n, car* tr_n, car* tt_s, car* tr_s, int mpi_myrank, int mp
     MPI_Request nrth;
     MPI_Request soth;
     MPI_Request request;
+
+    const int n_items = 6;
+    int blocklengths[6] = {1,1,1,1,1,1};
+    MPI_Datatype types[6] = {MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, 
+                            MPI_UNSIGNED_SHORT, MPI_UNSIGNED_LONG,
+                            MPI_UNSIGNED_LONG, MPI_UNSIGNED_SHORT};
+    MPI_Datatype mpi_car_type;
+    MPI_Aint offsets[6];
+    offsets[0] = offsetof(car, s_col);
+    offsets[1] = offsetof(car, s_row);
+    offsets[2] = offsetof(car, s_idx);
+    offsets[3] = offsetof(car, e_col);
+    offsets[4] = offsetof(car, e_row);
+    offsets[5] = offsetof(car, e_idx);
+    MPI_Type_create_struct(n_items, blocklengths, offsets, types, &mpi_car_type);
+    MPI_Type_commit(&mpi_car_type);
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     if(mpi_myrank != 0) {
-        MPI_Irecv(tr_n, SIDE_LENGTH, t_type, mpi_myrank-1, 0, MPI_COMM_WORLD, &nrth);
+        MPI_Irecv(&tr_n[0], SIDE_LENGTH, mpi_car_type, mpi_myrank-1, 0, MPI_COMM_WORLD, &nrth);
     }
     if(mpi_myrank != mpi_commsize -1) {
-        MPI_Irecv(tr_s, SIDE_LENGTH, t_type, mpi_myrank+1, 1, MPI_COMM_WORLD, &soth);
+        MPI_Irecv(&tr_s[0], SIDE_LENGTH, mpi_car_type, mpi_myrank+1, 1, MPI_COMM_WORLD, &soth);
     }
     if(mpi_myrank != mpi_commsize -1) {
-        MPI_Isend(tt_s, SIDE_LENGTH, t_type, mpi_myrank+1, 0, MPI_COMM_WORLD, &request);
+        MPI_Isend(&tt_s[0], SIDE_LENGTH, mpi_car_type, mpi_myrank+1, 0, MPI_COMM_WORLD, &request);
     }
     if(mpi_myrank != 0) {
-        MPI_Isend(tt_n, SIDE_LENGTH, t_type, mpi_myrank-1, 1, MPI_COMM_WORLD, &request);
+        MPI_Isend(&tt_n[0], SIDE_LENGTH, mpi_car_type, mpi_myrank-1, 1, MPI_COMM_WORLD, &request);
     }
 
-    MPI_Wait(&nrth, MPI_STATUS_IGNORE);
-    MPI_Wait(&soth, MPI_STATUS_IGNORE);
+    if(mpi_myrank != 0) MPI_Wait(&nrth, MPI_STATUS_IGNORE);
+    if(mpi_myrank != mpi_commsize -1) MPI_Wait(&soth, MPI_STATUS_IGNORE);
+}
+
+unsigned long total_grid_dist_to_travel(unsigned long glbl_row_idx, street* sts, unsigned int n){
+    unsigned long sum = 0;
+    unsigned long r, c;
+    unsigned long glbl_col_idx = !(glbl_row_idx%2);
+    for(size_t i = 0; i < n; i++)
+    {
+        r = glbl_row_idx + 2*(i/n);
+        c = glbl_col_idx + 2*(i%n);
+        for(size_t j = 0; j < ROAD_CAP; j++)
+        {
+            sum += sts[i].go_es[j] ? dist_eloc(sts[i].go_es[j], c, r) : 0;
+            sum += sts[i].go_wn[j] ? dist_eloc(sts[i].go_wn[j], c, r) : 0;
+        }
+        
+    }
+    return sum;
 }
