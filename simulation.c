@@ -110,6 +110,11 @@ void unpack_transfer(car* tr_n, street* gs_n,
 void transfer(car* tt_n, car* tr_n, car* tt_s, car* tr_s, int mpi_myrank, int mpi_commsize, 
         MPI_Datatype t_type);
 
+void update_intersections(unsigned int rpr, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt);
+
+void update_streets(street *ew_now, street *ns_now, street *ew_nxt, street *ns_nxt,
+        street *ghost_nrth_now, street *ghost_soth_now, street *ghost_nrth_nxt,
+            street *ghost_soth_nxt);
 
 /***************************************************************************/
 /* Function: Main **********************************************************/
@@ -436,4 +441,52 @@ void transfer(car* tt_n, car* tr_n, car* tt_s, car* tr_s, int mpi_myrank, int mp
 
     MPI_Wait(&nrth, MPI_STATUS_IGNORE);
     MPI_Wait(&soth, MPI_STATUS_IGNORE);
+}
+
+// move everything down the streets
+void update_streets(street *ew_now, street *ns_now, street *ew_nxt, street *ns_nxt,
+        street *ghost_nrth_now, street *ghost_soth_now, street *ghost_nrth_nxt,
+            street *ghost_soth_nxt) {
+
+}
+
+// make sure to switch which are passed...
+// first give priority to 
+void update_intersections(unsigned int rpr, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt) {
+    // update nxt based on now
+    for(size_t i = 0; i < rpr*SIDE_LENGTH; i++) {
+
+        if(i/SIDE_LENGTH == 0) {
+            // if touching north side
+            // if(mpi_myrank != 0) {
+            //     is[i].nrth = &g_ns_n[i];
+            // } else {
+            //     is[i].nrth = NULL;
+            // }
+        } else {
+            // is[i].nrth = &s_ns[i-SIDE_LENGTH];
+        }
+        if(i/SIDE_LENGTH == SIDE_LENGTH-1) {
+            // if touching south side
+            // if(mpi_myrank != mpi_commsize-1) {
+            //     is[i].soth = &g_ns_s[i%SIDE_LENGTH];
+            // } else {
+            //     is[i].soth = NULL;
+            // }
+        } else {
+            // is[i].soth = &s_ns[i];
+        }
+        if(i%SIDE_LENGTH == SIDE_LENGTH-1) {
+            // if touching east side
+            // is[i].east = NULL;
+        } else {
+            // is[i].east = &s_ew[i-i/SIDE_LENGTH];
+        }
+        if(i%SIDE_LENGTH == 0) {
+            // if touching west side
+            // is[i].west = NULL;
+        } else {
+            // is[i].west = &s_ew[i-1-i/SIDE_LENGTH];
+        }
+    }
 }
