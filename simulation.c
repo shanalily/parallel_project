@@ -118,6 +118,11 @@ void update_intersections(unsigned int rpr, unsigned long glbl_index, intrsctn *
 
 unsigned long total_grid_dist_to_travel(unsigned long glbl_row_idx, street* sts, unsigned int n);
 
+unsigned long total_grid_dist_to_travel_ghost(unsigned long glbl_row_idx, street* sts, unsigned int n, int n_or_s);
+
+
+
+
 unsigned long total_street_dist_to_travel();
 
 /***************************************************************************/
@@ -205,9 +210,11 @@ int main(int argc, char *argv[])
     
     MPI_Barrier( MPI_COMM_WORLD );
 
-    unsigned long dist_left = 
-            total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr) +
-            total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
+    unsigned long dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
+    unsigned long dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
+    unsigned long dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
+    unsigned long dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
+    unsigned long dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
     printf("Rank %d: Tick %d: Distance left is %lu\n", mpi_myrank, 0, dist_left);
 
     // for loop of ticks
@@ -590,7 +597,7 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             }
         }
     }
-}
+ }
 
 int reached_destination(unsigned long glbl_row_idx, unsigned long glbl_col_idx, unsigned short idx, car c) {
     // if (glbl_row_idx == car.e_row && glbl_col_idx == car.e_col && idx == car.e_idx)
@@ -604,12 +611,37 @@ unsigned long total_grid_dist_to_travel(unsigned long glbl_row_idx, street* sts,
     unsigned long glbl_col_idx = !(glbl_row_idx%2);
     for(size_t i = 0; i < n; i++)
     {
-        r = glbl_row_idx + 2*(i/n);
-        c = glbl_col_idx + 2*(i%n);
+        r = glbl_row_idx + 2*(i/(SIDE_LENGTH-glbl_col_idx));
+        c = glbl_col_idx + 2*(i%(SIDE_LENGTH-glbl_col_idx));
+        // printf("%lu %lu\n", r, c);
         for(size_t j = 0; j < ROAD_CAP; j++)
         {
             sum += sts[i].go_es[j] ? dist_eloc(sts[i].go_es[j], c, r) : 0;
             sum += sts[i].go_wn[j] ? dist_eloc(sts[i].go_wn[j], c, r) : 0;
+            // sum += sts[i].go_es[j] ? 1 : 0;
+            // sum += sts[i].go_wn[j] ? 1 : 0;
+        }
+        
+    }
+    return sum;
+}
+
+unsigned long total_grid_dist_to_travel_ghost(unsigned long glbl_row_idx, street* sts, unsigned int n, int n_or_s){
+    // n_or_s 0 -> only count north 1-> only count south
+    unsigned long sum = 0;
+    unsigned long r, c;
+    unsigned long glbl_col_idx = !(glbl_row_idx%2);
+    for(size_t i = 0; i < n; i++)
+    {
+        r = glbl_row_idx + 2*(i/SIDE_LENGTH);
+        c = glbl_col_idx + 2*(i%SIDE_LENGTH);
+        for(size_t j = 0; j < ROAD_CAP; j++)
+        {
+            if (n_or_s) {sum += sts[i].go_es[j] ? dist_eloc(sts[i].go_es[j], c, r) : 0;}
+            else {sum += sts[i].go_wn[j] ? dist_eloc(sts[i].go_wn[j], c, r) : 0;}
+            // if (n_or_s) {sum += sts[i].go_es[j] ? 1 : 0;}
+            // else {sum += sts[i].go_wn[j] ? 1 : 0;}
+
         }
         
     }
