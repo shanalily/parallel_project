@@ -36,6 +36,8 @@
 
 #define ROAD_CAP 4
 
+#define EMPTY NULL
+
 /***************************************************************************/
 /* Structs *****************************************************************/
 /***************************************************************************/
@@ -110,9 +112,7 @@ void unpack_transfer(car* tr_n, street* gs_n,
 void transfer(car* tt_n, car* tr_n, car* tt_s, car* tr_s, int mpi_myrank, int mpi_commsize, 
         MPI_Datatype t_type);
 
-void update_streets(unsigned int rpr, street *ew_now, street *ns_now, street *ew_nxt,
-        street *ns_nxt, street *ghost_nrth_now, street *ghost_soth_now, street *ghost_nrth_nxt,
-            street *ghost_soth_nxt);
+void update_streets(unsigned int n, street *streets_now, street *streets_nxt);
 
 void update_intersections(unsigned int rpr, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt,
     street *ew_now, street *ns_now, street *ghost_nrth_now, street *ghost_soth_now);
@@ -224,9 +224,11 @@ int main(int argc, char *argv[])
     unpack_transfer(to_receive_nrth, ghost_ns_nrth_now,
             to_receive_soth, ghost_ns_soth_now);
     // update streets
-    update_streets(rpr, streets_ew_now, streets_ns_now, streets_ew_nxt, streets_ns_nxt,
-        ghost_ns_nrth_now, ghost_ns_soth_now, ghost_ns_nrth_nxt, ghost_ns_soth_nxt);
-    // run intersections
+    // update east/west
+    update_streets(rpr*(SIDE_LENGTH-1), streets_ew_now, streets_ew_nxt);
+    // update north/south
+    update_streets((rpr-1)*SIDE_LENGTH, streets_ns_now, streets_ns_nxt);
+    // run intersections. how do I make sure this gets updated ghost row streets?
     update_intersections(rpr, intrsctn_now, intrsctn_nxt, streets_ew_now, streets_ns_now,
         ghost_ns_nrth_now, ghost_ns_soth_now);
 
@@ -495,40 +497,25 @@ void transfer(car* tt_n, car* tr_n, car* tt_s, car* tr_s, int mpi_myrank, int mp
     if(mpi_myrank != mpi_commsize -1) MPI_Wait(&soth, MPI_STATUS_IGNORE);
 }
 
-// move everything down the streets
-// I'm so tired :( sorry I pushed this.
-void update_streets(unsigned int rpr, street *ew_now, street *ns_now, street *ew_nxt,
-        street *ns_nxt, street *ghost_nrth_now, street *ghost_soth_now, street *ghost_nrth_nxt,
-            street *ghost_soth_nxt) {
-    for (size_t i = 0; i < rpr*(SIDE_LENGTH-1); ++i) {
-        // update east/west
-        // update north/south
-        // which side of street is closer? for now I will assume 0
-        for (size_t j = 0; j < ROAD_CAP-1; ++j) {
-            // if (ew_nxt[i].go_es[j] == NULL) {
-            //     ew_now[i].go_es[j] = ew_nxt[i].go_es[j+1];
-            //     ew_nxt[i].go_es[j+1] = NULL;
-            // }
-            // if (ew_nxt[i].go_wn[j] == NULL) {
-            //     ew_now[i].go_wn[j] = ew_nxt[i].go_wn[j+1];
-            //     ew_nxt[i].go_wn[j+1] = NULL;
-            // }
+// Move everything down the streets. Slot ROAD_CAP-1 is the location on the street closest
+// to the intersection at the end of the block.
+// 0           ----> ROAD_CAP-1
+// ROAD_CAP-1 <----  0
+void update_streets(unsigned int n, street *streets_now, street *streets_nxt) {
+    for (size_t i = 0; i < n; ++i) {
+        // if location on street is empty, move up the next car (if it exists) from previous location
+        // set previous location to empty
+        for (size_t j = ROAD_CAP-1; j >= 1; --j) {
+            if (streets_nxt[i].go_es[j] == EMPTY) {
+                streets_now[i].go_es[j] = streets_nxt[i].go_es[j-1];
+                streets_nxt[i].go_es[j-1] = EMPTY;
+            }
+            if (streets_nxt[i].go_wn[j] == EMPTY) {
+                streets_now[i].go_wn[j] = streets_nxt[i].go_wn[j-1];
+                streets_nxt[i].go_wn[j-1] = EMPTY;
+            }
         }
     }
-
-    for (size_t i = 0; i < (rpr-1)*SIDE_LENGTH; ++i) {
-        for (size_t j = 0; j < ROAD_CAP-1; ++j) {
-            // if (ns_nxt[i].go_es[j] == NULL) {
-            //     ns_now[i].go_es[j] = ns_nxt[i].go_es[j+1];
-            //     ns_nxt[i].go_es[j+1] = NULL;
-            // }
-            // if (ns_nxt[i].go_wn[j] == NULL) {
-            //     ns_now[i].go_wn[j] = ns_nxt[i].go_es[j+1];
-            //     ns_nxt[i].go_wn[j+1] = NULL;
-            // }
-        }
-    }
-
 }
 
 // make sure to switch which are passed...
@@ -536,39 +523,31 @@ void update_streets(unsigned int rpr, street *ew_now, street *ns_now, street *ew
 // first give priority to ..
 void update_intersections(unsigned int rpr, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt,
         street *ew_now, street *ns_now, street *ghost_nrth_now, street *ghost_soth_now) {
-    // update nxt based on now
+    // update nxt based on now. Determine who can move first, corresponding to traffic rules.
     for(size_t i = 0; i < rpr*SIDE_LENGTH; ++i) {
         if(i/SIDE_LENGTH == 0) {
             // if touching north side
-            // if(mpi_myrank != 0) {
-            //     is[i].nrth = &g_ns_n[i];
-            // } else {
-            //     is[i].nrth = NULL;
-            // }
+
         } else {
-            // is[i].nrth = &s_ns[i-SIDE_LENGTH];
+            
         }
         if(i/SIDE_LENGTH == SIDE_LENGTH-1) {
             // if touching south side
-            // if(mpi_myrank != mpi_commsize-1) {
-            //     is[i].soth = &g_ns_s[i%SIDE_LENGTH];
-            // } else {
-            //     is[i].soth = NULL;
-            // }
+
         } else {
-            // is[i].soth = &s_ns[i];
+            
         }
         if(i%SIDE_LENGTH == SIDE_LENGTH-1) {
             // if touching east side
-            // is[i].east = NULL;
+           
         } else {
-            // is[i].east = &s_ew[i-i/SIDE_LENGTH];
+            
         }
         if(i%SIDE_LENGTH == 0) {
             // if touching west side
-            // is[i].west = NULL;
+            
         } else {
-            // is[i].west = &s_ew[i-1-i/SIDE_LENGTH];
+           
         }
     }
 }
