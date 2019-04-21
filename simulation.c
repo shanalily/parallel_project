@@ -114,8 +114,7 @@ void transfer(car* tt_n, car* tr_n, car* tt_s, car* tr_s, int mpi_myrank, int mp
 
 void update_streets(unsigned int n, street *streets_now, street *streets_nxt);
 
-void update_intersections(unsigned int rpr, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt,
-    street *ew_now, street *ns_now, street *ghost_nrth_now, street *ghost_soth_now);
+void update_intersections(unsigned int rpr, unsigned long glbl_index, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt);
 
 unsigned long total_grid_dist_to_travel(unsigned long glbl_row_idx, street* sts, unsigned int n);
 
@@ -229,8 +228,7 @@ int main(int argc, char *argv[])
     // update north/south
     update_streets((rpr-1)*SIDE_LENGTH, streets_ns_now, streets_ns_nxt);
     // run intersections. how do I make sure this gets updated ghost row streets?
-    update_intersections(rpr, intrsctn_now, intrsctn_nxt, streets_ew_now, streets_ns_now,
-        ghost_ns_nrth_now, ghost_ns_soth_now);
+    update_intersections(rpr, glbl_index, intrsctn_now, intrsctn_nxt);
 
     // frees
     free(streets_ew_now);
@@ -506,50 +504,98 @@ void update_streets(unsigned int n, street *streets_now, street *streets_nxt) {
         // if location on street is empty, move up the next car (if it exists) from previous location
         // set previous location to empty
         for (size_t j = ROAD_CAP-1; j >= 1; --j) {
-            if (streets_nxt[i].go_es[j] == EMPTY) {
-                streets_now[i].go_es[j] = streets_nxt[i].go_es[j-1];
-                streets_nxt[i].go_es[j-1] = EMPTY;
+            if (streets_now[i].go_es[j] == EMPTY) {
+                streets_nxt[i].go_es[j] = streets_now[i].go_es[j-1];
+                streets_now[i].go_es[j-1] = EMPTY;
             }
-            if (streets_nxt[i].go_wn[j] == EMPTY) {
-                streets_now[i].go_wn[j] = streets_nxt[i].go_wn[j-1];
-                streets_nxt[i].go_wn[j-1] = EMPTY;
+            if (streets_now[i].go_wn[j] == EMPTY) {
+                streets_nxt[i].go_wn[j] = streets_now[i].go_wn[j-1];
+                streets_now[i].go_wn[j-1] = EMPTY;
             }
         }
+        // last slot of now will have it's previous value still.
     }
 }
 
 // make sure to switch which are passed...
 // do I assume everything is in intersection object?
+// what is I update streets and then update intersections, making a car move more than once in one
+// tick? that doesn't seem right
 // first give priority to ..
-void update_intersections(unsigned int rpr, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt,
-        street *ew_now, street *ns_now, street *ghost_nrth_now, street *ghost_soth_now) {
+void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt) {
     // update nxt based on now. Determine who can move first, corresponding to traffic rules.
+    unsigned int block_end = ROAD_CAP-1;
     for(size_t i = 0; i < rpr*SIDE_LENGTH; ++i) {
-        if(i/SIDE_LENGTH == 0) {
-            // if touching north side
+        unsigned int glbl_col_idx = i%SIDE_LENGTH;
+        // unsigned int glbl_row_idx
+        // if coming from north
+        // Check where car is heading.
+        // If heading right/left/down, go right/left/down.
+        // If heading bottom-right, go straight or right.
+        // If Heading bottom-left, go straight or left.
+        // If coming from north, should not be needing to go top-left or top-right.
+        // Is this car necessarily coming from the north?
+        if (intrsctn_now[i].nrth->go_wn[block_end]) {
 
-        } else {
-            
-        }
-        if(i/SIDE_LENGTH == SIDE_LENGTH-1) {
-            // if touching south side
+            car *c = intrsctn_now[i].nrth->go_wn[block_end];
+            // coming from north, should they turn straight, right, or left?
+            if (c->e_row == glbl_row_idx) {
+                // left or right? or HERE? here should be checked at end of this function though
+                if (c->e_col > i%glbl_col_idx) { // go east?
 
-        } else {
-            
+                } else { // go west?
+
+                }
+
+            } else { // go straight?
+
+            }
+
         }
-        if(i%SIDE_LENGTH == SIDE_LENGTH-1) {
-            // if touching east side
-           
-        } else {
-            
+        if (intrsctn_now[i].west->go_wn[block_end]) { // coming from west
+
+            car *c = intrsctn_now[i].west->go_wn[block_end];
+            if (c->e_col == i%glbl_col_idx) {
+                // up or down?
+                if (c->e_row > glbl_row_idx) { // down?
+
+                } else { // up?
+
+                }
+            } else {
+                // try to go straight
+            }
+
         }
-        if(i%SIDE_LENGTH == 0) {
-            // if touching west side
-            
-        } else {
-           
+        if (intrsctn_now[i].soth->go_es[block_end]) {
+
+            car *c = intrsctn_now[i].soth->go_es[block_end];
+            if (c->e_row == glbl_row_idx) {
+                if (c->e_col == i%glbl_col_idx) {
+
+                } else {
+
+                }
+            }
+
+        }
+        if (intrsctn_now[i].east->go_es[block_end]) {
+            car *c = intrsctn_now[i].east->go_es[block_end];
+            if (c->e_col == i%glbl_col_idx) {
+                if (c->e_row > glbl_row_idx) {
+
+                }
+            } else {
+
+            }
         }
     }
+}
+
+int reached_destination(unsigned long glbl_row_idx, unsigned long glbl_col_idx, unsigned short idx, car c) {
+    // if (glbl_row_idx == car.e_row && glbl_col_idx == car.e_col && idx == car.e_idx)
+    //     return 1;
+    return 0;
 }
 
 unsigned long total_grid_dist_to_travel(unsigned long glbl_row_idx, street* sts, unsigned int n){
