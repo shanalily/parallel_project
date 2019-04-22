@@ -114,6 +114,8 @@ void transfer(car* tt_n, car* tr_n, car* tt_s, car* tr_s, int mpi_myrank, int mp
 
 void update_streets(unsigned int n, street *streets_now, street *streets_nxt);
 
+void update_ghost_streets(unsigned int n, street* ghost_now, street* ghost_nxt, int n_or_s);
+
 void update_intrsctns(unsigned int rpr, unsigned long glbl_index, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt);
 
 int reached_dest(unsigned long glbl_row_idx, unsigned long glbl_col_idx, unsigned short idx, car *c);
@@ -236,6 +238,9 @@ int main(int argc, char *argv[])
     update_streets(rpr*(SIDE_LENGTH-1), streets_ew_now, streets_ew_nxt);
     // update north/south
     update_streets((rpr-1)*SIDE_LENGTH, streets_ns_now, streets_ns_nxt);
+    // update ghost rows
+    update_ghost_streets(SIDE_LENGTH, ghost_ns_nrth_now, ghost_ns_nrth_nxt, 0);
+    update_ghost_streets(SIDE_LENGTH, ghost_ns_soth_now, ghost_ns_soth_nxt, 1);
     // run intersections. how do I make sure this gets updated ghost row streets?
     // if (intrsctn_nxt[0].east)
         // printf("%lu\n", intrsctn_nxt[0].east->go_wn[1]->e_col);
@@ -442,12 +447,14 @@ void pack_transfer(car* tt_n, street* gs_n,
     {
         if (gs_n[i].go_wn[0]) {
             memcpy(&(tt_n[i]), gs_n[i].go_wn[0], sizeof(car));
+            free(gs_n[i].go_wn[0]);
         }
         else{
             memcpy(&(tt_n[i]), &sample, sizeof(car));
         }
         if(gs_s[i].go_es[0]){
             memcpy(&(tt_s[i]), gs_s[i].go_es[0], sizeof(car));
+            free(gs_s[i].go_es[0]);
         }
         else {
             memcpy(&(tt_s[i]), &sample, sizeof(car));
@@ -460,10 +467,20 @@ void unpack_transfer(car* tr_n, street* gs_n,
         car* tr_s, street* gs_s){
     for(size_t i = 0; i < SIDE_LENGTH; i++)
     {
-        gs_n[i].go_es[0] = calloc(1, sizeof(car));
-        memcpy(gs_n[i].go_es[0], &tr_n[i], sizeof(car));
-        gs_s[i].go_wn[0] = calloc(1, sizeof(car));
-        memcpy(gs_s[i].go_wn[0], &tr_s[i], sizeof(car));
+        if (trn_n[i].s_col != 0 || trn_n[i].s_row != 0) {
+            gs_n[i].go_es[0] = calloc(1, sizeof(car));
+            memcpy(gs_n[i].go_es[0], &tr_n[i], sizeof(car));
+        }
+        else {
+            gs_n[i].go_es[0] = NULL;
+        }
+        if (trn_s[i].s_col != 0 || trn_s[i].s_row != 0) {
+            gs_s[i].go_wn[0] = calloc(1, sizeof(car));
+            memcpy(gs_s[i].go_wn[0], &tr_s[i], sizeof(car));
+        }
+        else {
+            gs_s[i].go_wn[0] = NULL;
+        }
     }
 }
 
@@ -505,6 +522,8 @@ void transfer(car* tt_n, car* tr_n, car* tt_s, car* tr_s, int mpi_myrank, int mp
 
     if(mpi_myrank != 0) MPI_Wait(&nrth, MPI_STATUS_IGNORE);
     if(mpi_myrank != mpi_commsize -1) MPI_Wait(&soth, MPI_STATUS_IGNORE);
+
+    MPI_Type_free(&mpi_car_type);
 }
 
 // Move everything down the streets. Slot ROAD_CAP-1 is the location on the street closest
@@ -521,6 +540,25 @@ void update_streets(unsigned int n, street *streets_now, street *streets_nxt) {
                 streets_now[i].go_es[j-1] = EMPTY;
             }
             if (streets_now[i].go_wn[j] == EMPTY) {
+                streets_nxt[i].go_wn[j] = streets_now[i].go_wn[j-1];
+                streets_now[i].go_wn[j-1] = EMPTY;
+            }
+        }
+        // last slot of now will have it's previous value still.
+    }
+}
+
+void update_ghost_streets(unsigned int n, street* ghost_now, street* ghost_nxt, int n_or_s){
+    // n_or_s == 0 -> n 1->s
+    for (size_t i = 0; i < n; ++i) {
+        // if location on street is empty, move up the next car (if it exists) from previous location
+        // set previous location to empty
+        for (size_t j = ROAD_CAP-1; j >= 1; --j) {
+            if (n_or_s && streets_now[i].go_es[j] == EMPTY) {
+                streets_nxt[i].go_es[j] = streets_now[i].go_es[j-1];
+                streets_now[i].go_es[j-1] = EMPTY;
+            }
+            if (!n_or_s && streets_now[i].go_wn[j] == EMPTY) {
                 streets_nxt[i].go_wn[j] = streets_now[i].go_wn[j-1];
                 streets_now[i].go_wn[j-1] = EMPTY;
             }
