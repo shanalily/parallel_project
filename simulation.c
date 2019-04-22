@@ -545,6 +545,25 @@ void update_streets(unsigned int n, street *streets_now, street *streets_nxt) {
     }
 }
 
+void update_ghost_streets(unsigned int n, street* ghost_now, street* ghost_nxt, int n_or_s){
+    // n_or_s == 0 -> n 1->s
+    for (size_t i = 0; i < n; ++i) {
+        // if location on street is empty, move up the next car (if it exists) from previous location
+        // set previous location to empty
+        for (size_t j = ROAD_CAP-1; j >= 1; --j) {
+            if (n_or_s && streets_now[i].go_es[j] == EMPTY) {
+                streets_nxt[i].go_es[j] = streets_now[i].go_es[j-1];
+                streets_now[i].go_es[j-1] = EMPTY;
+            }
+            if (!n_or_s && streets_now[i].go_wn[j] == EMPTY) {
+                streets_nxt[i].go_wn[j] = streets_now[i].go_wn[j-1];
+                streets_now[i].go_wn[j-1] = EMPTY;
+            }
+        }
+        // last slot of now will have it's previous value still.
+    }
+}
+
 // make sure to switch which intersections are passed between now and nxt
 // do I assume everything is in intersection object?
 // what if I update streets and then update intersections, making a car move more than once in one
@@ -667,8 +686,4 @@ unsigned long total_grid_dist_to_travel_ghost(unsigned long glbl_row_idx, street
         
     }
     return sum;
-}
-
-void update_ghost_streets(unsigned int n, street* ghost_now, street* ghost_nxt, int n_or_s){
-
 }
