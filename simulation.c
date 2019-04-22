@@ -237,6 +237,9 @@ int main(int argc, char *argv[])
     // update north/south
     update_streets((rpr-1)*SIDE_LENGTH, streets_ns_now, streets_ns_nxt);
     // run intersections. how do I make sure this gets updated ghost row streets?
+    // if (intrsctn_nxt[0].east)
+        // printf("%lu\n", intrsctn_nxt[0].east->go_wn[1]->e_col);
+    // printf("hi\n");
     update_intrsctns(rpr, glbl_index, intrsctn_now, intrsctn_nxt);
 
     // frees
@@ -533,69 +536,95 @@ void update_streets(unsigned int n, street *streets_now, street *streets_nxt) {
 void update_intrsctns(unsigned int rpr, unsigned long glbl_row_idx, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt) {
     // update nxt based on now. Determine who can move first, corresponding to traffic rules.
     unsigned int block_end = ROAD_CAP-1;
+    unsigned int strt_blck = 0;
+    int east = 0, west = 0, north = 0, south = 0;
     for(size_t i = 0; i < rpr*SIDE_LENGTH; ++i) {
         unsigned long row_idx = glbl_row_idx + 2*(i/SIDE_LENGTH)/*+ 2*(i/(SIDE_LENGTH-glbl_col_idx))*/;
         unsigned long col_idx = 2*(i%SIDE_LENGTH);
         // Check where car is heading.
         // If coming from north, should not be needing to go top-left or top-right.
         // prioritize going straight, then right, then left, depending on direction of destination
-        if (intrsctn_now[i].nrth->go_wn[block_end]) {
+        // Check if car can come from north, and if a car is coming from north.
+        if (intrsctn_now[i].nrth && intrsctn_now[i].nrth->go_wn[block_end]) {
 
             car *c = intrsctn_now[i].nrth->go_wn[block_end];
             // coming from north, should they turn straight, right, or left?
             if (c->e_row == row_idx) {
-                // left or right? or HERE? here should be checked at end of this function though
+                // left or right? or arrived? arrived should be checked at end of this function though
                 if (c->e_col <= col_idx) { // go west/right?
-
+                    intrsctn_nxt[i].west->go_wn[strt_blck] = c;
+                    west = 1;
                 } else { // go east/left?
-
+                    intrsctn_nxt[i].east->go_es[strt_blck] = c;
+                    east = 1;
                 }
 
             } else { // go straight?
-
+                intrsctn_nxt[i].soth->go_es[strt_blck] = c;
+                south  = 1;
             }
+            intrsctn_nxt[i].nrth->go_wn[block_end] = EMPTY;
 
         }
-        if (intrsctn_now[i].west->go_wn[block_end]) { // coming from west
+        if (intrsctn_now[i].west && intrsctn_now[i].west->go_wn[block_end]) { // coming from west
 
             car *c = intrsctn_now[i].west->go_wn[block_end];
             if (c->e_col == col_idx) {
                 // up or down?
-                if (c->e_row > row_idx) { // south?
-
-                } else { // up?
-
+                if (c->e_row >= row_idx && !south) { // south?
+                    intrsctn_nxt[i].soth->go_es[strt_blck] = c;
+                    south = 1;
+                } else if (!north) { // up?
+                    intrsctn_nxt[i].nrth->go_wn[strt_blck] = c;
+                    north = 1;
                 }
-            } else {
+
+            } else if (!east) {
                 // try to go straight
+                intrsctn_nxt[i].east->go_es[strt_blck] = c;
+                east = 1;
             }
+            if (!west)
+                intrsctn_nxt[i].west->go_es[block_end] = EMPTY; // ? if another car wasn't already just moved there
 
         }
-        if (intrsctn_now[i].soth->go_es[block_end]) {
+        if (intrsctn_now[i].soth && intrsctn_now[i].soth->go_es[block_end]) {
 
             car *c = intrsctn_now[i].soth->go_es[block_end];
             if (c->e_row == row_idx) {
                 // east or west?
-                if (c->e_col >= col_idx) { // go east/right?
-
-                } else {
-
+                if (c->e_col >= col_idx && !east) { // go east/right?
+                    intrsctn_nxt[i].east->go_es[strt_blck] = c;
+                    east = 1;
+                } else if (!west) {
+                    intrsctn_nxt[i].west->go_wn[strt_blck] = c;
+                    west = 1;
                 }
+            } else if (!north) {
+                intrsctn_nxt[i].nrth->go_es[strt_blck] = c;
+                north = 1;
             }
+            if (!south)
+                intrsctn_nxt[i].soth->go_es[block_end] = EMPTY;
 
         }
-        if (intrsctn_now[i].east->go_es[block_end]) {
+        if (intrsctn_now[i].east && intrsctn_now[i].east->go_es[block_end]) {
             car *c = intrsctn_now[i].east->go_es[block_end];
             if (c->e_col == col_idx) {
                 // north or south?
                 if (c->e_row <= row_idx) { // north/right?
-
+                    intrsctn_nxt[i].nrth->go_wn[strt_blck] = c;
+                    north = 1;
                 } else { //
-
+                    intrsctn_nxt[i].soth->go_es[strt_blck] = c;
+                    south = 1;
                 }
             } else {
-
+                intrsctn_nxt[i].west->go_wn[strt_blck] = c;
+                west = 1;
             }
+            if (!east)
+               intrsctn_nxt[i].east->go_es[block_end] = EMPTY;
         }
     }
 
