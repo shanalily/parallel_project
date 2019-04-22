@@ -242,9 +242,6 @@ int main(int argc, char *argv[])
     update_ghost_streets(SIDE_LENGTH, ghost_ns_nrth_now, ghost_ns_nrth_nxt, 0);
     update_ghost_streets(SIDE_LENGTH, ghost_ns_soth_now, ghost_ns_soth_nxt, 1);
     // run intersections. how do I make sure this gets updated ghost row streets?
-    // if (intrsctn_nxt[0].east)
-        // printf("%lu\n", intrsctn_nxt[0].east->go_wn[1]->e_col);
-    // printf("hi\n");
     update_intrsctns(rpr, glbl_index, intrsctn_now, intrsctn_nxt);
 
     // frees
@@ -467,14 +464,14 @@ void unpack_transfer(car* tr_n, street* gs_n,
         car* tr_s, street* gs_s){
     for(size_t i = 0; i < SIDE_LENGTH; i++)
     {
-        if (trn_n[i].s_col != 0 || trn_n[i].s_row != 0) {
+        if (tr_n[i].s_col != 0 || tr_n[i].s_row != 0) {
             gs_n[i].go_es[0] = calloc(1, sizeof(car));
             memcpy(gs_n[i].go_es[0], &tr_n[i], sizeof(car));
         }
         else {
             gs_n[i].go_es[0] = NULL;
         }
-        if (trn_s[i].s_col != 0 || trn_s[i].s_row != 0) {
+        if (tr_s[i].s_col != 0 || tr_s[i].s_row != 0) {
             gs_s[i].go_wn[0] = calloc(1, sizeof(car));
             memcpy(gs_s[i].go_wn[0], &tr_s[i], sizeof(car));
         }
@@ -554,13 +551,13 @@ void update_ghost_streets(unsigned int n, street* ghost_now, street* ghost_nxt, 
         // if location on street is empty, move up the next car (if it exists) from previous location
         // set previous location to empty
         for (size_t j = ROAD_CAP-1; j >= 1; --j) {
-            if (n_or_s && streets_now[i].go_es[j] == EMPTY) {
-                streets_nxt[i].go_es[j] = streets_now[i].go_es[j-1];
-                streets_now[i].go_es[j-1] = EMPTY;
+            if (n_or_s && ghost_now[i].go_es[j] == EMPTY) {
+                ghost_nxt[i].go_es[j] = ghost_now[i].go_es[j-1];
+                ghost_now[i].go_es[j-1] = EMPTY;
             }
-            if (!n_or_s && streets_now[i].go_wn[j] == EMPTY) {
-                streets_nxt[i].go_wn[j] = streets_now[i].go_wn[j-1];
-                streets_now[i].go_wn[j-1] = EMPTY;
+            if (!n_or_s && ghost_now[i].go_wn[j] == EMPTY) {
+                ghost_nxt[i].go_wn[j] = ghost_now[i].go_wn[j-1];
+                ghost_now[i].go_wn[j-1] = EMPTY;
             }
         }
         // last slot of now will have it's previous value still.
