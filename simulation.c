@@ -273,9 +273,7 @@ int main(int argc, char *argv[])
 #ifdef DEBUG
     int car_count = check_car_count(rpr, intrsctn_now);
 #endif
-    if(mpi_myrank == 0) {
-        update_intersections(rpr, glbl_index, intrsctn_now, intrsctn_nxt, &r);
-    }
+    update_intersections(rpr, glbl_index, intrsctn_now, intrsctn_nxt, &r);
 #ifdef DEBUG
     check_grid(rpr, intrsctn_now, streets_ew_now, streets_ns_now, 
             ghost_ns_nrth_now, ghost_ns_soth_nxt);
