@@ -469,8 +469,11 @@ void generate_cars(unsigned long n, unsigned long glbl_row_idx, street* strts,
 
                 // end location (non-unique)
                 c->e_col = (unsigned long) (GenVal(row)*(2*SIDE_LENGTH-1));
-                c->e_row = (unsigned long) (GenVal(row)*(2*SIDE_LENGTH-1));
+                c->e_row = 2*((unsigned long) (GenVal(row)*(SIDE_LENGTH-1)))+!(c->e_col%2);
                 c->e_idx = (int) (GenVal(row)*(ROAD_CAP));
+                #ifdef DEBUG
+                assert(c->e_col%2 != c->e_row%2);
+                #endif
 
                 if ((c->e_col >= c->s_col && !row_or_col) ||
                         (c->e_row >= c->s_row && row_or_col)) {
