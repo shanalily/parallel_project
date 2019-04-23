@@ -742,7 +742,7 @@ void print_intersection(intrsctn intersection) {
         if (intersection.west && intersection.west->go_es[ROAD_CAP-1]) printf("e    e\n");
         else printf("     e\n");
     }
-    else if (intersection.west && intersection.west->go_es[ROAD_CAP-1]) printf("e      \n");
+    else if (intersection.west && intersection.west->go_es[ROAD_CAP-1]) printf("e     \n");
     else printf("      \n");
 
     if (intersection.soth && intersection.soth->go_wn[0]) { // coming from south, heading north
@@ -751,7 +751,7 @@ void print_intersection(intrsctn intersection) {
         else
             printf("   s  \n");
     } else if (intersection.soth && intersection.soth->go_es[ROAD_CAP-1]) { // coming from north, going south
-        printf("  s  \n");
+        printf("  s   \n");
     }
     else printf("      \n");
     printf("-------\n");
@@ -771,6 +771,7 @@ int reached_dest(unsigned long glbl_row_idx, unsigned long glbl_col_idx, unsigne
 // make sure to switch which intersections are passed between now and nxt.
 // EW streets have even rows numbers and odd columns numbers
 // NS streets have odd rows numbers and even column numbers
+// I'm not sure if I'm checking that next spot is actually open? I can deal with that later.
 void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt, intrsctn_rules *r) {
     // update nxt based on now. Determine who can move first, corresponding to traffic rules.
     unsigned int block_end = ROAD_CAP-1;
@@ -792,21 +793,21 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             // check | c->e_row == row_idx+1? row_idx+1 is NS
             if (c->e_row == row_idx || c->e_row == row_idx+1) {
                 // left or right? or arrived? arrived should be checked at end of this function though
-                if (c->e_col <= col_idx && intrsctn_nxt[i].west) { // go west/right?.   Is my problem that streets aren't correctly set for nxt?
+                if (c->e_col <= col_idx && intrsctn_now[i].west) { // go west/right?.   Is my problem that streets aren't correctly set for nxt?
                     west = move_west(&intrsctn_nxt[i], c, r);
-                    printf("moved right\n");
-                } else if (intrsctn_nxt[i].east) { // go east/left?
+                    printf("north moved right\n");
+                } else if (intrsctn_now[i].east) { // go east/left?
                     east = move_east(&intrsctn_nxt[i], c, r); // should I be yielding the right of way?
                     left_turn = 1; // no other cars can move
-                    printf("moved left\n");
+                    printf("north moved left\n");
                 }
 
-            } else if (intrsctn_nxt[i].soth) {
-                printf("moved straight\n");
+            } else if (intrsctn_now[i].soth) {
+                printf("north moved straight\n");
                 south = move_soth(&intrsctn_nxt[i], c, r); // go straight?
                 nrth_to_soth_rules(r);
             }
-            move_from_wn(intrsctn_now[i].nrth);
+            // move_from_wn(intrsctn_now[i].nrth);
             // if (reached_dest(row_idx, col_idx, ROAD_CAP-1, c, 0)) // how should a DES deal with this?
             //     printf("reached destination! %lu %lu %d\n", row_idx, col_idx, ROAD_CAP-1);
 
@@ -815,17 +816,17 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             car *c = intrsctn_now[i].east->go_es[block_end];
             if (c->e_col == col_idx) {
                 // north or south?
-                if (intrsctn_nxt[i].nrth && c->e_row <= row_idx && r->east[RIGHT]) { // north/right?
+                if (intrsctn_now[i].nrth && c->e_row <= row_idx && r->east[RIGHT]) { // north/right?
                     move_nrth(&intrsctn_nxt[i], c, r);
-                    printf("moved right\n");
-                } else if (intrsctn_nxt[i].soth && r->east[LEFT]) {
+                    printf("east moved right\n");
+                } else if (intrsctn_now[i].soth && r->east[LEFT]) {
                     south = move_soth(&intrsctn_nxt[i], c, r);
                     left_turn = 1;
-                    printf("moved left\n");
+                    printf("east moved left\n");
                 }
 
-            } else if (intrsctn_nxt[i].west && r->east[STRGHT]) {
-                printf("moved straight\n");
+            } else if (intrsctn_now[i].west && r->east[STRGHT]) {
+                printf("east moved straight\n");
                 west = move_west(&intrsctn_nxt[i], c, r);
                 east_to_west_rules(r);
             }
@@ -837,17 +838,17 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             car *c = intrsctn_now[i].soth->go_es[block_end];
             if (c->e_row == row_idx || c->e_row == row_idx+1) {
                 // east or west?
-                if (intrsctn_nxt[i].east && c->e_col >= col_idx && r->soth[RIGHT]) { // go east/right?
+                if (intrsctn_now[i].east && c->e_col >= col_idx && r->soth[RIGHT]) { // go east/right?
                     east = move_east(&intrsctn_nxt[i], c, r);
-                    printf("moved right\n");
-                } else if (intrsctn_nxt[i].west && r->soth[LEFT]) {
+                    printf("south moved right\n");
+                } else if (intrsctn_now[i].west && r->soth[LEFT]) {
                     west = move_west(&intrsctn_nxt[i], c, r);
                     left_turn = 1;
-                    printf("moved left\n");
+                    printf("south moved left\n");
                 }
 
-            } else if (intrsctn_nxt[i].nrth && r->soth[STRGHT]) {
-                printf("moved straight\n");
+            } else if (intrsctn_now[i].nrth && r->soth[STRGHT]) {
+                printf("south moved straight\n");
                 move_nrth(&intrsctn_nxt[i], c, r);
                 soth_to_nrth_rules(r);
             }
@@ -860,16 +861,16 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             car *c = intrsctn_now[i].west->go_wn[block_end];
             if (c->e_col == col_idx) {
                 // up or down?
-                if (intrsctn_nxt[i].soth && c->e_row >= row_idx && r->west[RIGHT]) { // south?
+                if (intrsctn_now[i].soth && c->e_row >= row_idx && r->west[RIGHT]) { // south?
                     south = move_soth(&intrsctn_nxt[i], c, r);
-                    printf("moved right\n");
+                    printf("west moved right\n");
                 } else if (intrsctn_nxt[i].nrth && r->west[LEFT]) { // up?
                     move_nrth(&intrsctn_nxt[i], c, r);
-                    printf("moved left\n");
+                    printf("west moved left\n");
                 }
 
-            } else if (intrsctn_nxt[i].east && r->east[STRGHT]) { // try to go straight
-                printf("moved straight\n");
+            } else if (intrsctn_now[i].east && r->east[STRGHT]) { // try to go straight
+                printf("west moved straight\n");
                 east = move_east(&intrsctn_nxt[i], c, r);
                 west_to_east_rules(r);
             }
