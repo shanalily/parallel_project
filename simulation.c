@@ -679,19 +679,30 @@ void move_from_es(street *nxt_str) {
 }
 
 // Set and reset intersection rules.
-void reset_intrsctn(intrsctn intrsctn_nxt, intrsctn_rules *r) {
+void reset_intrsctn(intrsctn intrsctn_now, intrsctn intrsctn_nxt, intrsctn_rules *r) {
     intrsctn_nxt.nrth = EMPTY;
     intrsctn_nxt.soth = EMPTY;
     intrsctn_nxt.west = EMPTY;
     intrsctn_nxt.east = EMPTY;
-    for (size_t i = 0; i < TURN_OPTS; ++i) {
-        r->nrth[i] = 1;
-        r->soth[i] = 1;
-        r->west[i] = 1;
-        r->east[i] = 1;
-    }
+    // shouldn't be valid if there are four cars on road already. Look at current intersection.
+    // CAN TURN RIGHT
+    r->nrth[RIGHT] = (intrsctn_now.west && intrsctn_now.west->go_wn[0] == EMPTY) ? 1 : 0;
+    r->soth[RIGHT] = (intrsctn_now.east && intrsctn_now.east->go_es[0] == EMPTY) ? 1 : 0;
+    r->west[RIGHT] = (intrsctn_now.soth && intrsctn_now.soth->go_wn[0] == EMPTY) ? 1 : 0;
+    r->east[RIGHT] = (intrsctn_now.nrth && intrsctn_now.nrth->go_es[0] == EMPTY) ? 1 : 0;
+    // CAN GO STRAIGHT
+    r->nrth[STRGHT] = (intrsctn_now.soth && intrsctn_now.soth->go_wn[0] == EMPTY) ? 1 : 0;
+    r->soth[STRGHT] = (intrsctn_now.nrth && intrsctn_now.nrth->go_es[0] == EMPTY) ? 1 : 0;
+    r->west[STRGHT] = (intrsctn_now.east && intrsctn_now.east->go_wn[0] == EMPTY) ? 1 : 0;
+    r->east[STRGHT] = (intrsctn_now.west && intrsctn_now.west->go_es[0] == EMPTY) ? 1 : 0;
+    // CAN GO LEFT
+    r->nrth[LEFT] = (intrsctn_now.east && intrsctn_now.east->go_wn[0] == EMPTY) ? 1 : 0;
+    r->soth[LEFT] = (intrsctn_now.west && intrsctn_now.west->go_es[0] == EMPTY) ? 1 : 0;
+    r->west[LEFT] = (intrsctn_now.nrth && intrsctn_now.nrth->go_wn[0] == EMPTY) ? 1 : 0;
+    r->east[LEFT] = (intrsctn_now.soth && intrsctn_now.soth->go_es[0] == EMPTY) ? 1 : 0;
 }
 
+// If a car from north goes straight south, other cars are restricted in the following ways.
 void nrth_to_soth_rules(intrsctn_rules *r) {
     r->east[STRGHT] = 0; // east can't go straight
     r->soth[LEFT] = 0; // south can't go left
@@ -699,6 +710,7 @@ void nrth_to_soth_rules(intrsctn_rules *r) {
     r->west[LEFT] = 0;
 }
 
+// If a car from east goes straight west, other cars are restricted in the following ways.
 void east_to_west_rules(intrsctn_rules *r) {
     r->soth[STRGHT] = 0; // south can't go straight
     r->west[LEFT] = 0; // west can't go left
@@ -706,6 +718,7 @@ void east_to_west_rules(intrsctn_rules *r) {
     r->nrth[LEFT] = 0;
 }
 
+// If a car from south goes straight north, other cars are restricted in the following ways.
 void soth_to_nrth_rules(intrsctn_rules *r) {
     r->west[STRGHT] = 0; // west can't go straight
     r->nrth[LEFT] = 0; // north can't go left
@@ -713,6 +726,7 @@ void soth_to_nrth_rules(intrsctn_rules *r) {
     r->east[LEFT] = 0;
 }
 
+// If a car from west goes straight east, other cars are restricted in the following ways.
 void west_to_east_rules(intrsctn_rules *r) {
     r->nrth[STRGHT] = 0; // north can't go straight
     r->east[LEFT] = 0; // east can't go left
@@ -771,7 +785,7 @@ int reached_dest(unsigned long glbl_row_idx, unsigned long glbl_col_idx, unsigne
 // make sure to switch which intersections are passed between now and nxt.
 // EW streets have even rows numbers and odd columns numbers
 // NS streets have odd rows numbers and even column numbers
-// I'm not sure if I'm checking that next spot is actually open? I can deal with that later.
+// I'm not sure if I'm checking that next spot is actually open? I can deal with that later. There might be 4 cars already on road.
 void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt, intrsctn_rules *r) {
     // update nxt based on now. Determine who can move first, corresponding to traffic rules.
     unsigned int block_end = ROAD_CAP-1;
@@ -779,9 +793,11 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
     for (size_t i = 0; i < rpr*SIDE_LENGTH; ++i) {
         unsigned long row_idx = glbl_row_idx + 2*(i/SIDE_LENGTH); // index is for a horizontal street
         unsigned long col_idx = 2*(i%SIDE_LENGTH);
-        reset_intrsctn(intrsctn_nxt[i], r);
+        reset_intrsctn(intrsctn_now[i], intrsctn_nxt[i], r);
+        
         printf("before\n");
         print_intersection(intrsctn_now[i]);
+        
         // Check where car is heading.
         // If coming from north, should not be needing to go top-left or top-right.
         // prioritize going straight, then right, then left, depending on direction of destination
