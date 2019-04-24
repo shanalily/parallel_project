@@ -20,6 +20,7 @@
 #define GetTimeBase MPI_Wtime            
 #endif
 #define DEBUG 1
+#define DEBUG_IS 1
 
 #include <assert.h>
 
@@ -145,7 +146,8 @@ void west_to_east_rules(intrsctn_rules *r);
 int reached_dest(unsigned long glbl_row_idx, unsigned long glbl_col_idx, unsigned short idx, car *c, unsigned short es);
 void streets_check_dest(unsigned int n, unsigned long glbl_row_idx, street *streets, int row_or_col, int chck_nw, int check_se);
 
-void update_intersections(unsigned int rpr, unsigned long glbl_index, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt, intrsctn_rules *r);
+void update_intersections(unsigned int rpr, unsigned long glbl_index, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt);
+void update_intersections2(unsigned int rpr, unsigned long glbl_index, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt, intrsctn_rules *r);
 
 unsigned long total_grid_dist_to_travel(unsigned long glbl_row_idx, street* sts, unsigned int n);
 unsigned long total_grid_dist_to_travel_ghost(unsigned long glbl_row_idx, street* sts, unsigned int n, int n_or_s);
@@ -170,7 +172,7 @@ int main(int argc, char *argv[])
     // constants 
     // Rows per rank
     unsigned int rpr = SIDE_LENGTH/mpi_commsize;
-    float proportion = .25;
+    float proportion = 1;
     unsigned int glbl_index = 2*rpr*mpi_myrank;
     unsigned long num_ticks = 2;
     InitDefault();
@@ -293,14 +295,14 @@ int main(int argc, char *argv[])
         // printf("Rank %d: Tick %d: Cars left nxt is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
         // update streets
         // update east/west
-        update_streets(rpr*(SIDE_LENGTH-1), glbl_index, streets_ew_now, streets_ew_nxt, 0); // something in this function is wrong
-        // update north/south
-        update_streets((rpr-1)*SIDE_LENGTH, glbl_index, streets_ns_now, streets_ns_nxt, 1);
-        // printf("Rank %d f\n", mpi_myrank);
-        // update ghost rows
-        update_ghost_streets(SIDE_LENGTH, ghost_ns_nrth_now, ghost_ns_nrth_nxt, 0);
-        // printf("Rank %d g\n", mpi_myrank);
-        update_ghost_streets(SIDE_LENGTH, ghost_ns_soth_now, ghost_ns_soth_nxt, 1);
+        // update_streets(rpr*(SIDE_LENGTH-1), glbl_index, streets_ew_now, streets_ew_nxt, 0); // something in this function is wrong
+        // // update north/south
+        // update_streets((rpr-1)*SIDE_LENGTH, glbl_index, streets_ns_now, streets_ns_nxt, 1);
+        // // printf("Rank %d f\n", mpi_myrank);
+        // // update ghost rows
+        // update_ghost_streets(SIDE_LENGTH, ghost_ns_nrth_now, ghost_ns_nrth_nxt, 0);
+        // // printf("Rank %d g\n", mpi_myrank);
+        // update_ghost_streets(SIDE_LENGTH, ghost_ns_soth_now, ghost_ns_soth_nxt, 1);
 
         // dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
         // dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
@@ -316,7 +318,7 @@ int main(int argc, char *argv[])
         // printf("Rank %d: Tick %d: Cars left nxt is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
         // printf("Rank %d h\n", mpi_myrank);
         // run intersections
-        update_intersections(rpr, glbl_index, intrsctn_now, intrsctn_nxt, &r);
+        update_intersections(rpr, glbl_index, intrsctn_now, intrsctn_nxt);
 
         // dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
         // dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
@@ -431,14 +433,14 @@ void check_cars_start(unsigned long n, unsigned long glbl_row_idx, street* strts
         for(size_t j = 0; j < ROAD_CAP; j++)
         {
             // only one side of street should be full            
-            assert(!strts[i].go_es[j] || !strts[i].go_wn[j]);
+            assert(!strts[i].go_es[ROAD_CAP-1-j] || !strts[i].go_wn[j]);
             // if a street has a car it should be at the starting location
             assert(!strts[i].go_es[j] || (strts[i].go_es[j] && 
                     compare_sloc(strts[i].go_es[j], 
                     col, row, j)));
             assert(!strts[i].go_wn[j] || (strts[i].go_wn[j] && 
                     compare_sloc(strts[i].go_wn[j], 
-                    col, row, j)));
+                    col, row, ROAD_CAP-1-j)));
             
         }
         
@@ -564,14 +566,17 @@ void generate_cars(unsigned long n, unsigned long glbl_row_idx, street* strts,
                 assert(c->e_col%2 != c->e_row%2);
                 #endif
                 // printf("%d %d %d %d %d %d\n", c->e_col, c->e_row, c->s_idx, c->s_col, c->s_row, c->s_idx);
-
-                if ((c->e_col > c->s_col && !row_or_col) ||
-                        (c->e_row > c->s_row && row_or_col) || 
-                        (c->e_col == c->s_col && c->e_idx >= c->s_idx && !row_or_col) ||
-                        (c->e_row == c->s_row && c->e_idx >= c->e_row && row_or_col)) {
+                if(c->e_row == c->s_row && c->e_col == c->s_col && c->e_idx >= c->s_idx) {
+                    strts[i].go_es[j] = c;
+                }
+                else if(c->e_row == c->s_row && c->e_col == c->s_col && c->e_idx < c->s_idx) {
+                    strts[i].go_wn[ROAD_CAP-1-j] = c;
+                }
+                else if ((c->e_row > c->s_row && !row_or_col) ||
+                        (c->e_col > c->s_col && row_or_col)) {
                     strts[i].go_es[j] = c;
                 }else{
-                    strts[i].go_wn[j] = c;
+                    strts[i].go_wn[ROAD_CAP-1-j] = c;
                 }
             }
         }
@@ -939,10 +944,256 @@ void print_intersection(intrsctn intersection) {
     printf("-------\n");
 }
 
+void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt) {
+    unsigned long row_idx, col_idx;
+    unsigned int block_end = ROAD_CAP-1;
+    // int nrth, soth, east, west;
+    int strt_ew = 0, strt_ns = 0;
+    int left_ne_sw = 0, left_wn_es = 0;
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    for (size_t i = 0; i < rpr*SIDE_LENGTH; ++i) {
+        row_idx = glbl_row_idx + 2*(i/SIDE_LENGTH);
+        col_idx = 2*(i%SIDE_LENGTH);
+        strt_ew = 0;
+        strt_ns = 0;
+        left_ne_sw = 0;
+        left_wn_es = 0;
+    #ifdef DEBUG_IS
+        if(rank == 0){
+            printf("before %d %d %d\n", i, row_idx, col_idx);
+            print_intersection(intrsctn_now[i]);
+        }
+    #endif
+        // right turns
+        // north going to the west
+        if (intrsctn_now[i].nrth && intrsctn_now[i].nrth->go_es[block_end] && 
+                intrsctn_nxt[i].west && !intrsctn_nxt[i].west->go_wn[0] && 
+                intrsctn_now[i].nrth->go_es[block_end]->e_col < col_idx){
+            intrsctn_nxt[i].west->go_wn[0] = intrsctn_now[i].nrth->go_es[block_end];
+            intrsctn_now[i].nrth->go_es[block_end] = NULL;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("North taking a right turn to the west\n");
+            }
+        #endif
+        }
+        // south going to the east
+        if (intrsctn_now[i].soth && intrsctn_now[i].soth->go_wn[block_end] && 
+                intrsctn_nxt[i].east && !intrsctn_nxt[i].east->go_es[0] && 
+                intrsctn_now[i].soth->go_wn[block_end]->e_col > col_idx){
+            intrsctn_nxt[i].east->go_es[0] = intrsctn_now[i].soth->go_wn[block_end];
+            intrsctn_now[i].soth->go_wn[block_end] = NULL;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("South taking a right turn to the east\n");
+            }
+        #endif
+        }
+        // west going to the south
+        if (intrsctn_now[i].west && intrsctn_now[i].west->go_es[block_end] && 
+                intrsctn_nxt[i].soth && !intrsctn_nxt[i].soth->go_es[0] && 
+                intrsctn_now[i].west->go_es[block_end]->e_row > row_idx){
+            intrsctn_nxt[i].soth->go_es[0] = intrsctn_now[i].west->go_es[block_end];
+            intrsctn_now[i].west->go_es[block_end] = NULL;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("West taking a right turn to the south\n");
+            }
+        #endif
+        }
+        // east going to the north
+        // east going south
+        // if(i == 8 && rank == 0){
+        //     printf("%d %d %d %d %d\n", intrsctn_now[i].east, intrsctn_now[i].east->go_wn[block_end], 
+        //             intrsctn_nxt[i].nrth, !intrsctn_nxt[i].nrth->go_wn[0], intrsctn_now[i].east->go_wn[block_end]->e_row < row_idx);
+        // }
+        if (intrsctn_now[i].east && intrsctn_now[i].east->go_wn[block_end] && 
+                intrsctn_nxt[i].nrth && !intrsctn_nxt[i].nrth->go_wn[0] && 
+                intrsctn_now[i].east->go_wn[block_end]->e_row < row_idx){
+            intrsctn_nxt[i].nrth->go_wn[0] = intrsctn_now[i].east->go_wn[block_end];
+            intrsctn_now[i].east->go_wn[block_end] = NULL;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("East taking a right turn to the north\n");
+            }
+        #endif
+        }
+
+        // straight turns
+        // north going south
+        if (intrsctn_now[i].nrth && intrsctn_now[i].nrth->go_es[block_end] && 
+                intrsctn_nxt[i].soth && !intrsctn_nxt[i].soth->go_es[0] && 
+                !strt_ew && intrsctn_now[i].nrth->go_es[block_end]->e_row > row_idx){
+            intrsctn_nxt[i].soth->go_es[0] = intrsctn_now[i].nrth->go_es[block_end];
+            intrsctn_now[i].nrth->go_es[block_end] = NULL;
+            strt_ns = 1;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("north taking a straight turn to the south\n");
+            }
+        #endif
+        }
+        // south going north
+        if (intrsctn_now[i].soth && intrsctn_now[i].soth->go_wn[block_end] && 
+                intrsctn_nxt[i].nrth && !intrsctn_nxt[i].nrth->go_wn[0] && 
+                !strt_ew && intrsctn_now[i].soth->go_wn[block_end]->e_row < row_idx){
+            intrsctn_nxt[i].nrth->go_wn[0] = intrsctn_now[i].soth->go_wn[block_end];
+            intrsctn_now[i].soth->go_wn[block_end] = NULL;
+            strt_ns = 1;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("south taking a straight turn to the north\n");
+            }
+        #endif
+        }
+        // west going east
+        if (intrsctn_now[i].west && intrsctn_now[i].west->go_es[block_end] && 
+                intrsctn_nxt[i].east && !intrsctn_nxt[i].east->go_es[0] && 
+                !strt_ns && intrsctn_now[i].west->go_es[block_end]->e_col > col_idx){
+            intrsctn_nxt[i].east->go_es[0] = intrsctn_now[i].west->go_es[block_end];
+            intrsctn_now[i].west->go_es[block_end] = NULL;
+            strt_ew = 1;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("west taking a straight turn to the east\n");
+            }
+        #endif
+        }
+        // east going west
+        // if(i == 30 && rank == 0){
+        //     printf("%d %d %d %d %d %d\n", intrsctn_now[i].east, intrsctn_now[i].east->go_wn[block_end], 
+        //             intrsctn_nxt[i].west, !intrsctn_nxt[i].west->go_wn[0], !strt_ns, intrsctn_now[i].east->go_wn[block_end]->e_col < col_idx);
+        // }
+        if (intrsctn_now[i].east && intrsctn_now[i].east->go_wn[block_end] && 
+                intrsctn_nxt[i].west && !intrsctn_nxt[i].west->go_wn[0] && 
+                !strt_ns && intrsctn_now[i].east->go_wn[block_end]->e_col < col_idx){
+            intrsctn_nxt[i].west->go_wn[0] = intrsctn_now[i].east->go_wn[block_end];
+            intrsctn_now[i].east->go_wn[block_end] = NULL;
+            strt_ew = 1;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("east taking a straight turn to the west\n");
+            }
+        #endif
+        }
+
+        // left turns
+        // north going east
+        // if(i == 9 && rank == 0){
+        //     printf("%d %d %d %d %d %d %d\n", intrsctn_now[i].nrth, intrsctn_now[i].nrth->go_es[block_end], 
+        //             intrsctn_nxt[i].east, !intrsctn_nxt[i].east->go_es[0], !left_wn_es, !strt_ns, !strt_ew, intrsctn_now[i].nrth->go_es[block_end]->e_col > col_idx);
+        // }
+        if (intrsctn_now[i].nrth && intrsctn_now[i].nrth->go_es[block_end] && 
+                intrsctn_nxt[i].east && !intrsctn_nxt[i].east->go_es[0] && 
+                !left_wn_es && !strt_ns && !strt_ew && intrsctn_now[i].nrth->go_es[block_end]->e_col > col_idx){
+            intrsctn_nxt[i].east->go_es[0] = intrsctn_now[i].nrth->go_es[block_end];
+            intrsctn_now[i].nrth->go_es[block_end] = NULL;
+            left_ne_sw = 1;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("north taking a left turn to the east\n");
+            }
+        #endif
+        }
+        // south going west
+        if (intrsctn_now[i].soth && intrsctn_now[i].soth->go_wn[block_end] && 
+                intrsctn_nxt[i].west && !intrsctn_nxt[i].west->go_wn[0] && 
+                !left_wn_es && !strt_ns && !strt_ew && intrsctn_now[i].soth->go_wn[block_end]->e_col < col_idx){
+            intrsctn_nxt[i].west->go_wn[0] = intrsctn_now[i].soth->go_wn[block_end];
+            intrsctn_now[i].soth->go_wn[block_end] = NULL;
+            left_ne_sw = 1;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("south taking a left turn to the west\n");
+            }
+        #endif
+        }
+        // west going north
+        if (intrsctn_now[i].west && intrsctn_now[i].west->go_es[block_end] && 
+                intrsctn_nxt[i].nrth && !intrsctn_nxt[i].nrth->go_wn[0] && 
+                !left_ne_sw && !strt_ns && !strt_ew && intrsctn_now[i].west->go_es[block_end]->e_row < row_idx){
+            intrsctn_nxt[i].nrth->go_wn[0] = intrsctn_now[i].west->go_es[block_end];
+            intrsctn_now[i].west->go_es[block_end] = NULL;
+            left_wn_es = 1;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("west taking a left turn to the north\n");
+            }
+        #endif
+        }
+        if (intrsctn_now[i].east && intrsctn_now[i].east->go_wn[block_end] && 
+                intrsctn_nxt[i].soth && !intrsctn_nxt[i].soth->go_es[0] && 
+                !left_ne_sw && !strt_ns && !strt_ew && intrsctn_now[i].east->go_wn[block_end]->e_row > row_idx){
+            intrsctn_nxt[i].soth->go_es[0] = intrsctn_now[i].east->go_wn[block_end];
+            intrsctn_now[i].east->go_wn[block_end] = NULL;
+            left_wn_es = 1;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("east taking a left turn to the south\n");
+            }
+        #endif
+        }
+
+        // staying still
+        // north
+        if (intrsctn_now[i].nrth && intrsctn_now[i].nrth->go_es[block_end]){
+            intrsctn_nxt[i].nrth->go_es[block_end] = intrsctn_now[i].nrth->go_es[block_end];
+            intrsctn_now[i].nrth->go_es[block_end] = NULL;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("north staying still, end dest %d %d\n", 
+                        intrsctn_nxt[i].nrth->go_es[block_end]->e_row, intrsctn_nxt[i].nrth->go_es[block_end]->e_col);
+            }
+        #endif
+        }
+        // south
+        if (intrsctn_now[i].soth && intrsctn_now[i].soth->go_wn[block_end]){
+            intrsctn_nxt[i].soth->go_wn[block_end] = intrsctn_now[i].soth->go_wn[block_end];
+            intrsctn_now[i].soth->go_wn[block_end] = NULL;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("south staying still, end dest %d %d\n", 
+                        intrsctn_nxt[i].soth->go_wn[block_end]->e_row, intrsctn_nxt[i].soth->go_wn[block_end]->e_col);
+            }
+        #endif
+        }
+        // west
+        if (intrsctn_now[i].west && intrsctn_now[i].west->go_es[block_end]){
+            intrsctn_nxt[i].west->go_es[block_end] = intrsctn_now[i].west->go_es[block_end];
+            intrsctn_now[i].west->go_es[block_end] = NULL;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("west staying still, end dest %d %d\n",
+                        intrsctn_nxt[i].west->go_es[block_end]->e_row, intrsctn_nxt[i].west->go_es[block_end]->e_col);
+            }
+        #endif
+        }
+        // east
+        if (intrsctn_now[i].east && intrsctn_now[i].east->go_wn[block_end]){
+            intrsctn_nxt[i].east->go_wn[block_end] = intrsctn_now[i].east->go_wn[block_end];
+            intrsctn_now[i].east->go_wn[block_end] = NULL;
+        #ifdef DEBUG_IS
+            if(rank==0){
+                printf("east staying still, end dest %d %d\n",
+                    intrsctn_nxt[i].east->go_wn[block_end]->e_row, intrsctn_nxt[i].east->go_wn[block_end]->e_col);
+            }
+        #endif
+        }
+
+    #ifdef DEBUG_IS
+        if(rank==0){
+            printf("after\n");
+            print_intersection(intrsctn_nxt[i]);
+        }
+    #endif
+    }
+}
+
 // make sure to switch which intersections are passed between now and nxt.
 // EW streets have even rows numbers and odd columns numbers
 // NS streets have odd rows numbers and even column numbers
-void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt, intrsctn_rules *r) {
+void update_intersections2(unsigned int rpr, unsigned long glbl_row_idx, intrsctn *intrsctn_now, intrsctn *intrsctn_nxt, intrsctn_rules *r) {
     // update nxt based on now. Determine who can move first, corresponding to traffic rules.
     unsigned int block_end = ROAD_CAP-1;
     int left_turn = 0;
