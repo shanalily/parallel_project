@@ -1,0 +1,277 @@
+Rank 0: Tick 0: Cars left is 33 22 0 1 56
+Rank 1: Tick 0: Cars left is 33 32 1 0 66
+
+Rank 1: Tick 1: Cars left is 33 32 1 0 66
+Rank 1: Tick 1: Cars left nxt is 0 0 0 0 0
+Rank 1: Tick 1: Cars left is 33 32 1 0 66
+Rank 1: Tick 1: Cars left nxt is 0 0 0 0 0
+Rank 1: Tick 1: Cars left is 10 11 0 0 21
+Rank 1: Tick 1: Cars left nxt is 22 20 1 0 43
+Rank 1: Tick 1: Cars left is 10 11 3 0 24
+Rank 1: Tick 1: Cars left nxt is 17 20 1 0 38
+
+Rank 1: Tick 1: Cars left is 17 20 1 0 38
+
+Rank 0: Tick 1: Cars left is 33 22 0 1 56
+Rank 0: Tick 1: Cars left nxt is 0 0 0 0 0
+Rank 0: Tick 1: Cars left is 33 22 0 1 56
+Rank 0: Tick 1: Cars left nxt is 0 0 0 0 0
+Rank 0: Tick 1: Cars left is 7 8 0 0 15
+Rank 0: Tick 1: Cars left nxt is 25 13 0 1 39
+Rank 0: Tick 1: Cars left is 7 8 0 0 15
+Rank 0: Tick 1: Cars left nxt is 19 15 0 1 35
+
+Rank 0: Tick 1: Cars left is 19 15 0 1 35
+
+Rank 0: Tick 2: Cars left is 19 15 0 1 35
+Rank 0: Tick 2: Cars left nxt is 7 8 0 0 15
+Rank 1: Tick 2: Cars left is 17 20 1 0 38
+Rank 1: Tick 2: Cars left nxt is 10 11 3 0 24
+Rank 0: Tick 2: Cars left is 19 15 0 1 35
+Rank 1: Tick 2: Cars left is 17 20 1 0 38
+Rank 1: Tick 2: Cars left nxt is 10 11 3 0 24
+Rank 1: Tick 2: Cars left is 10 11 0 0 21
+Rank 1: Tick 2: Cars left nxt is 17 20 1 0 38
+Rank 1: Tick 2: Cars left is 10 12 0 0 22
+Rank 1: Tick 2: Cars left nxt is 10 11 1 0 22
+Rank 1: Tick 2: Cars left is 10 11 1 0 22
+Rank 1: Tick 3: Cars left is 10 11 1 0 22
+Rank 1: Tick 3: Cars left nxt is 10 12 0 0 22
+Rank 0: Tick 2: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 2: Cars left is 7 8 0 0 15
+Rank 0: Tick 2: Cars left nxt is 19 15 0 1 35
+Rank 0: Tick 2: Cars left is 7 8 0 0 15
+Rank 0: Tick 2: Cars left nxt is 7 8 0 1 16
+Rank 0: Tick 2: Cars left is 7 8 0 1 16
+Rank 0: Tick 3: Cars left is 7 8 0 1 16
+Rank 0: Tick 3: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 3: Cars left is 7 8 0 1 16
+Rank 0: Tick 3: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 3: Cars left is 7 8 0 0 15
+Rank 1: Tick 3: Cars left is 10 11 1 0 22
+Rank 0: Tick 3: Cars left nxt is 7 8 0 1 16
+Rank 0: Tick 3: Cars left is 7 8 0 0 15
+Rank 0: Tick 3: Cars left nxt is 7 8 0 1 16
+Rank 0: Tick 3: Cars left is 7 8 0 1 16
+Rank 0: Tick 4: Cars left is 7 8 0 1 16
+Rank 0: Tick 4: Cars left nxt is 7 8 0 0 15
+Rank 1: Tick 3: Cars left nxt is 10 12 0 0 22
+Rank 1: Tick 3: Cars left is 10 11 0 0 21
+Rank 1: Tick 3: Cars left nxt is 10 12 1 0 23
+Rank 1: Tick 3: Cars left is 10 11 1 0 22
+Rank 1: Tick 3: Cars left nxt is 10 12 1 0 23
+Rank 1: Tick 3: Cars left is 10 12 1 0 23
+Rank 1: Tick 4: Cars left is 10 12 1 0 23
+Rank 1: Tick 4: Cars left nxt is 10 11 1 0 22
+Rank 0: Tick 4: Cars left is 7 8 0 1 16
+Rank 1: Tick 4: Cars left is 10 12 1 0 23
+Rank 1: Tick 4: Cars left nxt is 10 11 1 0 22
+Rank 1: Tick 4: Cars left is 10 11 1 0 22
+Rank 1: Tick 4: Cars left nxt is 10 12 0 0 22
+Rank 1: Tick 4: Cars left is 10 11 1 0 22
+Rank 1: Tick 4: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 4: Cars left is 10 11 0 0 21
+Rank 1: Tick 5: Cars left is 10 11 0 0 21
+Rank 1: Tick 5: Cars left nxt is 10 11 1 0 22
+Rank 0: Tick 4: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 4: Cars left is 7 8 0 1 16
+Rank 0: Tick 4: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 4: Cars left is 7 8 0 1 16
+Rank 0: Tick 4: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 4: Cars left is 7 8 0 0 15
+Rank 0: Tick 5: Cars left is 7 8 0 0 15
+Rank 0: Tick 5: Cars left nxt is 7 8 0 1 16
+Rank 0: Tick 5: Cars left is 7 8 0 0 15
+Rank 0: Tick 5: Cars left nxt is 7 8 0 1 16
+Rank 0: Tick 5: Cars left is 7 8 0 0 15
+Rank 1: Tick 5: Cars left is 10 11 0 0 21
+Rank 0: Tick 5: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 5: Cars left is 7 8 0 0 15
+Rank 0: Tick 5: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 5: Cars left is 7 8 0 0 15
+Rank 0: Tick 6: Cars left is 7 8 0 0 15
+Rank 0: Tick 6: Cars left nxt is 7 8 0 0 15
+Rank 1: Tick 5: Cars left nxt is 10 11 1 0 22
+Rank 1: Tick 5: Cars left is 10 11 0 0 21
+Rank 1: Tick 5: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 5: Cars left is 10 11 0 0 21
+Rank 1: Tick 5: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 5: Cars left is 10 11 0 0 21
+Rank 1: Tick 6: Cars left is 10 11 0 0 21
+Rank 1: Tick 6: Cars left nxt is 10 11 0 0 21
+Rank 0: Tick 6: Cars left is 7 8 0 0 15
+Rank 1: Tick 6: Cars left is 10 11 0 0 21
+Rank 1: Tick 6: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 6: Cars left is 10 11 0 0 21
+Rank 1: Tick 6: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 6: Cars left is 10 11 0 0 21
+Rank 1: Tick 6: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 6: Cars left is 10 11 0 0 21
+Rank 1: Tick 7: Cars left is 10 11 0 0 21
+Rank 1: Tick 7: Cars left nxt is 10 11 0 0 21
+Rank 0: Tick 6: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 6: Cars left is 7 8 0 0 15
+Rank 0: Tick 6: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 6: Cars left is 7 8 0 0 15
+Rank 0: Tick 6: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 6: Cars left is 7 8 0 0 15
+Rank 0: Tick 7: Cars left is 7 8 0 0 15
+Rank 0: Tick 7: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 7: Cars left is 7 8 0 0 15
+Rank 0: Tick 7: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 7: Cars left is 7 8 0 0 15
+Rank 1: Tick 7: Cars left is 10 11 0 0 21
+Rank 0: Tick 7: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 7: Cars left is 7 8 0 0 15
+Rank 0: Tick 7: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 7: Cars left is 7 8 0 0 15
+Rank 0: Tick 8: Cars left is 7 8 0 0 15
+Rank 0: Tick 8: Cars left nxt is 7 8 0 0 15
+Rank 1: Tick 7: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 7: Cars left is 10 11 0 0 21
+Rank 1: Tick 7: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 7: Cars left is 10 11 0 0 21
+Rank 1: Tick 7: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 7: Cars left is 10 11 0 0 21
+Rank 1: Tick 8: Cars left is 10 11 0 0 21
+Rank 1: Tick 8: Cars left nxt is 10 11 0 0 21
+Rank 0: Tick 8: Cars left is 7 8 0 0 15
+Rank 1: Tick 8: Cars left is 10 11 0 0 21
+Rank 1: Tick 8: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 8: Cars left is 10 11 0 0 21
+Rank 1: Tick 8: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 8: Cars left is 10 11 0 0 21
+Rank 1: Tick 8: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 8: Cars left is 10 11 0 0 21
+Rank 1: Tick 9: Cars left is 10 11 0 0 21
+Rank 1: Tick 9: Cars left nxt is 10 11 0 0 21
+Rank 0: Tick 8: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 8: Cars left is 7 8 0 0 15
+Rank 0: Tick 8: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 8: Cars left is 7 8 0 0 15
+Rank 0: Tick 8: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 8: Cars left is 7 8 0 0 15
+Rank 0: Tick 9: Cars left is 7 8 0 0 15
+Rank 0: Tick 9: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 9: Cars left is 7 8 0 0 15
+Rank 0: Tick 9: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 9: Cars left is 7 8 0 0 15
+Rank 1: Tick 9: Cars left is 10 11 0 0 21
+Rank 0: Tick 9: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 9: Cars left is 7 8 0 0 15
+Rank 0: Tick 9: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 9: Cars left is 7 8 0 0 15
+Rank 0: Tick 10: Cars left is 7 8 0 0 15
+Rank 0: Tick 10: Cars left nxt is 7 8 0 0 15
+Rank 1: Tick 9: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 9: Cars left is 10 11 0 0 21
+Rank 1: Tick 9: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 9: Cars left is 10 11 0 0 21
+Rank 1: Tick 9: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 9: Cars left is 10 11 0 0 21
+Rank 1: Tick 10: Cars left is 10 11 0 0 21
+Rank 1: Tick 10: Cars left nxt is 10 11 0 0 21
+Rank 0: Tick 10: Cars left is 7 8 0 0 15
+Rank 0: Tick 10: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 10: Cars left is 7 8 0 0 15
+Rank 0: Tick 10: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 10: Cars left is 7 8 0 0 15
+Rank 1: Tick 10: Cars left is 10 11 0 0 21
+Rank 1: Tick 10: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 10: Cars left is 10 11 0 0 21
+Rank 0: Tick 10: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 10: Cars left is 7 8 0 0 15
+Rank 0: Tick 11: Cars left is 7 8 0 0 15
+Rank 0: Tick 11: Cars left nxt is 7 8 0 0 15
+Rank 1: Tick 10: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 10: Cars left is 10 11 0 0 21
+Rank 1: Tick 10: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 10: Cars left is 10 11 0 0 21
+Rank 1: Tick 11: Cars left is 10 11 0 0 21
+Rank 1: Tick 11: Cars left nxt is 10 11 0 0 21
+Rank 0: Tick 11: Cars left is 7 8 0 0 15
+Rank 1: Tick 11: Cars left is 10 11 0 0 21
+Rank 1: Tick 11: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 11: Cars left is 10 11 0 0 21
+Rank 1: Tick 11: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 11: Cars left is 10 11 0 0 21
+Rank 1: Tick 11: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 11: Cars left is 10 11 0 0 21
+Rank 1: Tick 12: Cars left is 10 11 0 0 21
+Rank 1: Tick 12: Cars left nxt is 10 11 0 0 21
+Rank 0: Tick 11: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 11: Cars left is 7 8 0 0 15
+Rank 0: Tick 11: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 11: Cars left is 7 8 0 0 15
+Rank 0: Tick 11: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 11: Cars left is 7 8 0 0 15
+Rank 0: Tick 12: Cars left is 7 8 0 0 15
+Rank 0: Tick 12: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 12: Cars left is 7 8 0 0 15
+Rank 0: Tick 12: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 12: Cars left is 7 8 0 0 15
+Rank 0: Tick 12: Cars left nxt is 7 8 0 0 15
+Rank 1: Tick 12: Cars left is 10 11 0 0 21
+Rank 0: Tick 12: Cars left is 7 8 0 0 15
+Rank 0: Tick 12: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 12: Cars left is 7 8 0 0 15
+Rank 0: Tick 13: Cars left is 7 8 0 0 15
+Rank 0: Tick 13: Cars left nxt is 7 8 0 0 15
+Rank 1: Tick 12: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 12: Cars left is 10 11 0 0 21
+Rank 1: Tick 12: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 12: Cars left is 10 11 0 0 21
+Rank 1: Tick 12: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 12: Cars left is 10 11 0 0 21
+Rank 1: Tick 13: Cars left is 10 11 0 0 21
+Rank 1: Tick 13: Cars left nxt is 10 11 0 0 21
+Rank 0: Tick 13: Cars left is 7 8 0 0 15
+Rank 1: Tick 13: Cars left is 10 11 0 0 21
+Rank 1: Tick 13: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 13: Cars left is 10 11 0 0 21
+Rank 1: Tick 13: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 13: Cars left is 10 11 0 0 21
+Rank 1: Tick 13: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 13: Cars left is 10 11 0 0 21
+Rank 1: Tick 14: Cars left is 10 11 0 0 21
+Rank 1: Tick 14: Cars left nxt is 10 11 0 0 21
+Rank 0: Tick 13: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 13: Cars left is 7 8 0 0 15
+Rank 0: Tick 13: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 13: Cars left is 7 8 0 0 15
+Rank 0: Tick 13: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 13: Cars left is 7 8 0 0 15
+Rank 0: Tick 14: Cars left is 7 8 0 0 15
+Rank 0: Tick 14: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 14: Cars left is 7 8 0 0 15
+Rank 0: Tick 14: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 14: Cars left is 7 8 0 0 15
+Rank 1: Tick 14: Cars left is 10 11 0 0 21
+Rank 0: Tick 14: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 14: Cars left is 7 8 0 0 15
+Rank 0: Tick 14: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 14: Cars left is 7 8 0 0 15
+Rank 0: Tick 15: Cars left is 7 8 0 0 15
+Rank 0: Tick 15: Cars left nxt is 7 8 0 0 15
+Rank 1: Tick 14: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 14: Cars left is 10 11 0 0 21
+Rank 1: Tick 14: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 14: Cars left is 10 11 0 0 21
+Rank 1: Tick 14: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 14: Cars left is 10 11 0 0 21
+Rank 1: Tick 15: Cars left is 10 11 0 0 21
+Rank 1: Tick 15: Cars left nxt is 10 11 0 0 21
+Rank 0: Tick 15: Cars left is 7 8 0 0 15
+Rank 1: Tick 15: Cars left is 10 11 0 0 21
+Rank 1: Tick 15: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 15: Cars left is 10 11 0 0 21
+Rank 1: Tick 15: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 15: Cars left is 10 11 0 0 21
+Rank 1: Tick 15: Cars left nxt is 10 11 0 0 21
+Rank 1: Tick 15: Cars left is 10 11 0 0 21
+Rank 0: Tick 15: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 15: Cars left is 7 8 0 0 15
+Rank 0: Tick 15: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 15: Cars left is 7 8 0 0 15
+Rank 0: Tick 15: Cars left nxt is 7 8 0 0 15
+Rank 0: Tick 15: Cars left is 7 8 0 0 15
