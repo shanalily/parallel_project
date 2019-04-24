@@ -19,7 +19,7 @@
 #else
 #define GetTimeBase MPI_Wtime            
 #endif
-// #define DEBUG 1
+#define DEBUG 1
 
 #include <assert.h>
 
@@ -171,10 +171,8 @@ int main(int argc, char *argv[])
     // Rows per rank
     unsigned int rpr = SIDE_LENGTH/mpi_commsize;
     float proportion = .25;
-    unsigned long long capacity = 2*(SIDE_LENGTH-1)*(SIDE_LENGTH)*ROAD_CAP;
-    unsigned long long n_cars = (unsigned long long) (((long double) proportion)*capacity);
     unsigned int glbl_index = 2*rpr*mpi_myrank;
-    unsigned long num_ticks = 16;
+    unsigned long num_ticks = 2;
     InitDefault();
 
     // To save space even ticks will be computed in now variables and odd
@@ -259,18 +257,18 @@ int main(int argc, char *argv[])
         streets_check_dest((rpr-1)*SIDE_LENGTH, glbl_index, streets_ns_now, 1, 1, 1);
         streets_check_dest(SIDE_LENGTH, glbl_index-1, ghost_ns_nrth_now, 0, 0, 1);
         streets_check_dest(SIDE_LENGTH, glbl_index+2*rpr-1, ghost_ns_soth_now, 0, 1, 0);
-        dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
-        dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
-        dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
-        dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
-        dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-        printf("Rank %d: Tick %d: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
-        dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_nxt, (SIDE_LENGTH-1)*rpr);
-        dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_nxt, SIDE_LENGTH*(rpr-1));
-        dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_nxt, SIDE_LENGTH, 0) : 0;
-        dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_nxt, SIDE_LENGTH, 1) : 0;
-        dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-        printf("Rank %d: Tick %d: Cars left nxt is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
+        // dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
+        // dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
+        // dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
+        // dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
+        // dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
+        // printf("Rank %d: Tick %d: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
+        // dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_nxt, (SIDE_LENGTH-1)*rpr);
+        // dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_nxt, SIDE_LENGTH*(rpr-1));
+        // dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_nxt, SIDE_LENGTH, 0) : 0;
+        // dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_nxt, SIDE_LENGTH, 1) : 0;
+        // dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
+        // printf("Rank %d: Tick %d: Cars left nxt is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
         
         
         // send and receive (blocking)
@@ -281,18 +279,18 @@ int main(int argc, char *argv[])
         unpack_transfer(to_receive_nrth, ghost_ns_nrth_now,
                 to_receive_soth, ghost_ns_soth_now);
         
-        dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
-        dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
-        dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
-        dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
-        dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-        printf("Rank %d: Tick %d: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
-        dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_nxt, (SIDE_LENGTH-1)*rpr);
-        dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_nxt, SIDE_LENGTH*(rpr-1));
-        dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_nxt, SIDE_LENGTH, 0) : 0;
-        dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_nxt, SIDE_LENGTH, 1) : 0;
-        dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-        printf("Rank %d: Tick %d: Cars left nxt is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
+        // dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
+        // dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
+        // dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
+        // dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
+        // dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
+        // printf("Rank %d: Tick %d: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
+        // dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_nxt, (SIDE_LENGTH-1)*rpr);
+        // dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_nxt, SIDE_LENGTH*(rpr-1));
+        // dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_nxt, SIDE_LENGTH, 0) : 0;
+        // dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_nxt, SIDE_LENGTH, 1) : 0;
+        // dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
+        // printf("Rank %d: Tick %d: Cars left nxt is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
         // update streets
         // update east/west
         update_streets(rpr*(SIDE_LENGTH-1), glbl_index, streets_ew_now, streets_ew_nxt, 0); // something in this function is wrong
@@ -304,34 +302,34 @@ int main(int argc, char *argv[])
         // printf("Rank %d g\n", mpi_myrank);
         update_ghost_streets(SIDE_LENGTH, ghost_ns_soth_now, ghost_ns_soth_nxt, 1);
 
-        dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
-        dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
-        dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
-        dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
-        dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-        printf("Rank %d: Tick %d: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
-        dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_nxt, (SIDE_LENGTH-1)*rpr);
-        dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_nxt, SIDE_LENGTH*(rpr-1));
-        dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_nxt, SIDE_LENGTH, 0) : 0;
-        dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_nxt, SIDE_LENGTH, 1) : 0;
-        dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-        printf("Rank %d: Tick %d: Cars left nxt is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
+        // dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
+        // dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
+        // dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
+        // dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
+        // dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
+        // printf("Rank %d: Tick %d: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
+        // dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_nxt, (SIDE_LENGTH-1)*rpr);
+        // dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_nxt, SIDE_LENGTH*(rpr-1));
+        // dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_nxt, SIDE_LENGTH, 0) : 0;
+        // dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_nxt, SIDE_LENGTH, 1) : 0;
+        // dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
+        // printf("Rank %d: Tick %d: Cars left nxt is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
         // printf("Rank %d h\n", mpi_myrank);
         // run intersections
         update_intersections(rpr, glbl_index, intrsctn_now, intrsctn_nxt, &r);
 
-        dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
-        dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
-        dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
-        dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
-        dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-        printf("Rank %d: Tick %d: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
-        dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_nxt, (SIDE_LENGTH-1)*rpr);
-        dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_nxt, SIDE_LENGTH*(rpr-1));
-        dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_nxt, SIDE_LENGTH, 0) : 0;
-        dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_nxt, SIDE_LENGTH, 1) : 0;
-        dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-        printf("Rank %d: Tick %d: Cars left nxt is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
+        // dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
+        // dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
+        // dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
+        // dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
+        // dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
+        // printf("Rank %d: Tick %d: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
+        // dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_nxt, (SIDE_LENGTH-1)*rpr);
+        // dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_nxt, SIDE_LENGTH*(rpr-1));
+        // dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_nxt, SIDE_LENGTH, 0) : 0;
+        // dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_nxt, SIDE_LENGTH, 1) : 0;
+        // dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
+        // printf("Rank %d: Tick %d: Cars left nxt is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
         // printf("Rank %d i\n", mpi_myrank);
 
         street* tmp;
@@ -357,12 +355,12 @@ int main(int argc, char *argv[])
         
 
 
-        dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
-        dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
-        dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
-        dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
-        dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-        printf("Rank %d: Tick %d: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
+        // dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
+        // dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
+        // dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
+        // dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
+        // dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
+        // printf("Rank %d: Tick %d: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
 
     }
 #ifdef DEBUG
@@ -736,12 +734,12 @@ void streets_check_dest(unsigned int n, unsigned long glbl_row_idx, street *stre
 // ROAD_CAP-1 <----  0
 void update_streets(unsigned int n, unsigned long glbl_row_idx, street *streets_now, street *streets_nxt,
         int row_or_col) { // row_or_col is 0 if e/w and 1 if n/s but I don't know why...
-    unsigned long row_idx, col_idx;
+    // unsigned long row_idx, col_idx;
     for (size_t i = 0; i < n; ++i) {
         // if location on street is empty, move up the next car (if it exists) from previous location
         // set previous location to empty
-        row_idx = glbl_row_idx + 2*(i/(SIDE_LENGTH-(!row_or_col))); // global row of block of street. -glbl_col_idx?
-        col_idx = 2*(i%(SIDE_LENGTH-!row_or_col)) + !row_or_col; // global column of block of street. -glbl_col_idx?
+        // row_idx = glbl_row_idx + 2*(i/(SIDE_LENGTH-(!row_or_col))); // global row of block of street. -glbl_col_idx?
+        // col_idx = 2*(i%(SIDE_LENGTH-!row_or_col)) + !row_or_col; // global column of block of street. -glbl_col_idx?
 
         for (unsigned int j = ROAD_CAP-1; j > 0; --j) {
             if (streets_now[i].go_es[j] != EMPTY) {
@@ -957,10 +955,10 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
         unsigned long col_idx = 2*(i%SIDE_LENGTH);
         reset_intrsctn(intrsctn_now[i], intrsctn_nxt[i], r);
         
-        // if(i==23 && rank == 0){
-        //     printf("before %d\n", !!intrsctn_now[i].west);
-        //     print_intersection(intrsctn_now[i]);
-        // }
+        if(rank == 0){
+            printf("before\n");
+            print_intersection(intrsctn_now[i]);
+        }
         
         // MOVE CAR ON NORTHERN SIDE OF INTERSECTION
         // Check where car is heading.
@@ -976,16 +974,16 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             if ((c->e_row == row_idx || c->e_row == row_idx+1) && c->e_col < col_idx && r->nrth[RIGHT]) { // go west/right?.   Is my problem that streets aren't correctly set for nxt?
                 move_west(&intrsctn_nxt[i], c, r);
                 // now other cars can't take that spot, make sure it's marked!
-                // printf("north moved right\n");
+                if(rank == 0) printf("north moved right\n");
             } else if ((c->e_row == row_idx || c->e_row == row_idx+1) && r->nrth[LEFT]) { // go east/left? could be at destination street.
                 move_east(&intrsctn_nxt[i], c, r); // should I be yielding the right of way?
                 left_turn = 1; // no other cars can move
-                // printf("north moved left\n");
+                if(rank == 0) printf("north moved left\n");
             }
             else if (r->nrth[STRGHT]) {
                 move_soth(&intrsctn_nxt[i], c, r); // go straight?
                 nrth_to_soth_rules(r);
-                // printf("north moved straight\n");
+                if(rank == 0) printf("north moved straight\n");
             }
             else {
                 intrsctn_nxt[i].nrth->go_es[block_end] = c; // stay in place
@@ -1002,14 +1000,14 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             // north or south?
             if (!left_turn && c->e_col == col_idx && c->e_row < row_idx && r->east[RIGHT]) { // north/right?
                 move_nrth(&intrsctn_nxt[i], c, r);
-                // printf("east moved right\n");
+                if(rank == 0) printf("east moved right\n");
             } else if (!left_turn && c->e_col == col_idx && c->e_row > row_idx && r->east[LEFT]) { // shouldn't turn if rows are equal, on street already
                 move_soth(&intrsctn_nxt[i], c, r);
                 left_turn = 1;
-                // printf("east moved left\n");
+                if(rank == 0) printf("east moved left\n");
             }
             else if (!left_turn && r->east[STRGHT]) {
-                // printf("east moved straight\n");
+                if(rank == 0) printf("east moved straight\n");
                 move_west(&intrsctn_nxt[i], c, r);
                 east_to_west_rules(r);
             }
@@ -1028,14 +1026,14 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             // east or west?
             if (!left_turn && (c->e_row == row_idx || c->e_row == row_idx+1) && c->e_col <= col_idx && r->soth[RIGHT]) { // go east/right?
                 move_east(&intrsctn_nxt[i], c, r);
-                // printf("south moved right\n");
+                if(rank == 0) printf("south moved right\n");
             } else if (!left_turn && (c->e_row == row_idx || c->e_row == row_idx+1) && r->soth[LEFT]) {
                 move_west(&intrsctn_nxt[i], c, r);
                 left_turn = 1;
-                // printf("south moved left\n");
+                if(rank == 0) printf("south moved left\n");
             }
             else if (!left_turn && r->soth[STRGHT]) {
-                // printf("south moved straight\n");
+                if(rank == 0)printf("south moved straight\n");
                 move_nrth(&intrsctn_nxt[i], c, r);
                 soth_to_nrth_rules(r);
             }
@@ -1054,13 +1052,13 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             // up or down?
             if (!left_turn && c->e_col == col_idx && c->e_row > row_idx && r->west[RIGHT]) { // south?
                 move_soth(&intrsctn_nxt[i], c, r);
-                // if(i==23 && rank == 0) printf("west moved right\n");
+                if(rank == 0) printf("west moved right\n");
             } else if (!left_turn && c->e_col == col_idx && r->west[LEFT]) { // up?
                 move_nrth(&intrsctn_nxt[i], c, r);
-                // if(i==23 && rank == 0) printf("west moved left\n");
+                if(rank == 0) printf("west moved left\n");
             }
             else if (!left_turn && r->east[STRGHT]) { // try to go straight
-                // printf("west moved straight\n");
+                if(rank == 0) printf("west moved straight\n");
                 move_east(&intrsctn_nxt[i], c, r);
                 intrsctn_nxt[i].east->go_es[0] = c;
                 west_to_east_rules(r);
@@ -1071,8 +1069,10 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
 
         }
         // printf("east: %d\nsouth: %d\nwest: %d\nleft turn: %d\n\n", east, south, west, left_turn);
-        // printf("after\n");
-        // print_intersection(intrsctn_nxt[i]);
+        if(rank==0){
+            printf("after\n");
+            print_intersection(intrsctn_nxt[i]);
+        }
         // printf("\n");
         left_turn = 0;
     }
@@ -1081,12 +1081,12 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
 
 unsigned long total_grid_dist_to_travel(unsigned long glbl_row_idx, street* sts, unsigned int n){
     unsigned long sum = 0;
-    unsigned long r, c;
-    unsigned long glbl_col_idx = !(glbl_row_idx%2);
+    // unsigned long r, c;
+    // unsigned long glbl_col_idx = !(glbl_row_idx%2);
     for(size_t i = 0; i < n; i++)
     {
-        r = glbl_row_idx + 2*(i/(SIDE_LENGTH-glbl_col_idx));
-        c = glbl_col_idx + 2*(i%(SIDE_LENGTH-glbl_col_idx));
+        // r = glbl_row_idx + 2*(i/(SIDE_LENGTH-glbl_col_idx));
+        // c = glbl_col_idx + 2*(i%(SIDE_LENGTH-glbl_col_idx));
         // printf("%lu %lu\n", r, c);
         for(size_t j = 0; j < ROAD_CAP; j++)
         {
@@ -1103,12 +1103,12 @@ unsigned long total_grid_dist_to_travel(unsigned long glbl_row_idx, street* sts,
 unsigned long total_grid_dist_to_travel_ghost(unsigned long glbl_row_idx, street* sts, unsigned int n, int n_or_s){
     // n_or_s 0 -> only count north 1-> only count south
     unsigned long sum = 0;
-    unsigned long r, c;
-    unsigned long glbl_col_idx = !(glbl_row_idx%2);
+    // unsigned long r, c;
+    // unsigned long glbl_col_idx = !(glbl_row_idx%2);
     for(size_t i = 0; i < n; i++)
     {
-        r = glbl_row_idx + 2*(i/SIDE_LENGTH);
-        c = glbl_col_idx + 2*(i%SIDE_LENGTH);
+        // r = glbl_row_idx + 2*(i/SIDE_LENGTH);
+        // c = glbl_col_idx + 2*(i%SIDE_LENGTH);
         for(size_t j = 0; j < ROAD_CAP; j++)
         {
             // if (n_or_s) {sum += sts[i].go_es[j] ? dist_eloc(sts[i].go_es[j], c, r) : 0;}
