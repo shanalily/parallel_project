@@ -19,9 +19,9 @@
 #else
 #define GetTimeBase MPI_Wtime            
 #endif
-#define DEBUG 1
-// #define DEBUG_IS 1
 
+// #define DEBUG 1
+// #define DEBUG_IS 1
 #include <assert.h>
 
 /***************************************************************************/
@@ -31,7 +31,7 @@
 #ifdef BGQ
 #define SIDE_LENGTH 32768
 #else
-#define SIDE_LENGTH 8
+#define SIDE_LENGTH 128
 #endif
 
 
@@ -94,6 +94,12 @@ typedef struct right_of_way {
 /***************************************************************************/
 /* Global Vars *************************************************************/
 /***************************************************************************/
+
+double g_time_in_secs = 0;
+double g_processor_frequency = 1600000000.0; // processing speed for BG/Q
+unsigned long long g_start_cycles=0;
+unsigned long long g_end_cycles=0;
+
 
 /***************************************************************************/
 /* Function Decs ***********************************************************/
@@ -182,7 +188,6 @@ int main(int argc, char *argv[])
     // The pointers will switch after every tick
     
     // array of streets
-    printf("%d %d %d\n", sizeof(street), sizeof(intrsctn), sizeof(car));
     street* streets_ew_now = calloc(rpr*(SIDE_LENGTH-1), sizeof(street));
     street* streets_ew_nxt = calloc(rpr*(SIDE_LENGTH-1), sizeof(street));
     street* streets_ns_now = calloc((rpr-1)*SIDE_LENGTH, sizeof(street));
@@ -211,7 +216,6 @@ int main(int argc, char *argv[])
             ghost_ns_nrth_now, ghost_ns_soth_now, mpi_myrank, mpi_commsize);
     mk_grid(rpr, intrsctn_nxt, streets_ns_nxt, streets_ew_nxt,
             ghost_ns_nrth_nxt, ghost_ns_soth_nxt, mpi_myrank, mpi_commsize);
-
 
 // check if grids are valid
 #ifdef DEBUG
@@ -242,16 +246,18 @@ int main(int argc, char *argv[])
 #endif
     
     MPI_Barrier( MPI_COMM_WORLD );
-
+    if (mpi_myrank == 0) {
+        g_start_cycles = GetTimeBase();
+    }
+    MPI_Barrier( MPI_COMM_WORLD );
+#ifdef DEBUG
     unsigned long dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
     unsigned long dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
     unsigned long dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
     unsigned long dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
     unsigned long dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-    printf("Rank %d: Tick %d: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, 0, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
-
-    // intrsctn *cur_intrsctn_now, *cur_intrsctn_nxt;
-    // street *cur_streets_ew_now, *cur_streets_ns_now, *cur_streets_ew_nxt, *cur_streets_ns_nxt;
+    printf("Rank %d: Tick %u: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, 0, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
+#endif
     // for loop of ticks
     for (size_t i = 1; i < num_ticks; ++i) {
         
@@ -351,16 +357,14 @@ int main(int argc, char *argv[])
         tmp2 = intrsctn_now;
         intrsctn_now = intrsctn_nxt;
         intrsctn_nxt = tmp2;
-        
-
-
+    #ifdef DEBUG
         dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
         dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
         dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
         dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
         dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-        printf("Rank %d: Tick %d: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
-
+        printf("Rank %d: Tick %u: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
+    #endif
     }
 #ifdef DEBUG
     check_grid(rpr, intrsctn_now, streets_ew_now, streets_ns_now, 
@@ -369,6 +373,12 @@ int main(int argc, char *argv[])
             ghost_ns_nrth_nxt, ghost_ns_soth_nxt);
     assert(car_count == check_car_count(rpr, intrsctn_nxt));
 #endif
+    MPI_Barrier( MPI_COMM_WORLD );
+    if (mpi_myrank == 0) {
+        g_end_cycles = GetTimeBase();
+        g_time_in_secs = ((double)(g_end_cycles - g_start_cycles))/g_processor_frequency;
+        printf("Sim time: %f\n", g_time_in_secs);
+    }
 
     // frees
     for(size_t i = 0; i < rpr*(SIDE_LENGTH-1); i++)
@@ -736,12 +746,16 @@ void streets_check_dest(unsigned int n, unsigned long glbl_row_idx, street *stre
             // }
             
             if (check_se && streets[i].go_es[j] && reached_dest(row_idx, col_idx, j, streets[i].go_es[j], 1)) {
+            #ifdef DEBUG
                 printf("reached destination! %lu %lu %lu\n", row_idx, col_idx, j);
+            #endif
                 free(streets[i].go_es[j]);
                 streets[i].go_es[j] = NULL;
             }
             if (check_nw && streets[i].go_wn[j] && reached_dest(row_idx, col_idx, j, streets[i].go_wn[j], 0)) {
+            #ifdef DEBUG
                 printf("reached destination! %lu %lu %lu\n", row_idx, col_idx, j);
+            #endif
                 free(streets[i].go_wn[j]);
                 streets[i].go_wn[j] = NULL;
             }
@@ -808,9 +822,8 @@ void update_streets(unsigned int n, street *streets_now, street *streets_nxt,
 // input should be the even glbl_row_idx and even glbl_col_idx from update_intersections. Assume e_idx if is pointing west or north.
 int reached_dest(unsigned long glbl_row_idx, unsigned long glbl_col_idx, unsigned short idx, car *c, unsigned short es) {
     if (glbl_row_idx == c->e_row && glbl_col_idx == c->e_col
-            && ((es && idx == c->e_idx) || (!es && idx == ROAD_CAP-1-c->e_idx))) {
+            && ((es && idx == c->e_idx) || (!es && idx == ROAD_CAP-1-c->e_idx)))
         return 1;
-    }
     return 0;
 }
 
@@ -859,7 +872,9 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
     int strt_ew = 0, strt_ns = 0;
     int left_ne_sw = 0, left_wn_es = 0;
     int rank;
+    #ifdef DEBUG_IS
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    #endif
     for (size_t i = 0; i < rpr*SIDE_LENGTH; ++i) {
         row_idx = glbl_row_idx + 2*(i/SIDE_LENGTH);
         col_idx = 2*(i%SIDE_LENGTH);
@@ -869,7 +884,7 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
         left_wn_es = 0;
     #ifdef DEBUG_IS
         if(rank == 0){
-            printf("before %d %d\n", i, 
+            printf("before %lu %d\n", i, 
                     (intrsctn_now[i].nrth ? intrsctn_now[i].nrth->go_es[block_end] != NULL : 0) + 
                     (intrsctn_now[i].west ? intrsctn_now[i].west->go_es[block_end] != NULL : 0) + 
                     (intrsctn_now[i].east ? intrsctn_now[i].east->go_wn[block_end] != NULL : 0) + 
@@ -987,7 +1002,6 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             }
         #endif
         }
-
         // left turns
         // north going east
         // if(i == 9 && rank == 0){
@@ -1044,7 +1058,6 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             }
         #endif
         }
-
         // staying still
         // north
         if (intrsctn_now[i].nrth && intrsctn_now[i].nrth->go_es[block_end]){
@@ -1052,7 +1065,7 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             intrsctn_now[i].nrth->go_es[block_end] = NULL;
         #ifdef DEBUG_IS
             if(rank==0){
-                printf("north staying still, end dest %d %d\n", 
+                printf("north staying still, end dest %lu %lu\n", 
                         intrsctn_nxt[i].nrth->go_es[block_end]->e_row, intrsctn_nxt[i].nrth->go_es[block_end]->e_col);
             }
         #endif
@@ -1063,7 +1076,7 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             intrsctn_now[i].soth->go_wn[block_end] = NULL;
         #ifdef DEBUG_IS
             if(rank==0){
-                printf("south staying still, end dest %d %d\n", 
+                printf("south staying still, end dest %lu %lu\n", 
                         intrsctn_nxt[i].soth->go_wn[block_end]->e_row, intrsctn_nxt[i].soth->go_wn[block_end]->e_col);
             }
         #endif
@@ -1074,7 +1087,7 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             intrsctn_now[i].west->go_es[block_end] = NULL;
         #ifdef DEBUG_IS
             if(rank==0){
-                printf("west staying still, end dest %d %d\n",
+                printf("west staying still, end dest %lu %lu\n",
                         intrsctn_nxt[i].west->go_es[block_end]->e_row, intrsctn_nxt[i].west->go_es[block_end]->e_col);
             }
         #endif
@@ -1085,14 +1098,14 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             intrsctn_now[i].east->go_wn[block_end] = NULL;
         #ifdef DEBUG_IS
             if(rank==0){
-                printf("east staying still, end dest %d %d\n",
+                printf("east staying still, end dest %lu %lu\n",
                     intrsctn_nxt[i].east->go_wn[block_end]->e_row, intrsctn_nxt[i].east->go_wn[block_end]->e_col);
             }
         #endif
         }
     #ifdef DEBUG_IS
         if(rank==0){
-            printf("after %d %d\n", i, 
+            printf("after %lu %d\n", i, 
                     (intrsctn_nxt[i].nrth ? intrsctn_nxt[i].nrth->go_wn[0] != NULL : 0) + 
                     (intrsctn_nxt[i].west ? intrsctn_nxt[i].west->go_wn[0] != NULL : 0) + 
                     (intrsctn_nxt[i].east ? intrsctn_nxt[i].east->go_es[0] != NULL : 0) + 
