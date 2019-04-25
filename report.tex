@@ -39,8 +39,9 @@ City Traffic Discrete Event Simulation}
 Our goal was to implement a parallel discrete event simulator which models vehicle traffic patterns to reveal which traffic rules result in the shortest trips between a location A and location B, in a large grid modeled after a city. Though implementations of traffic pattern DES already exist, we will use this as an opportunity to learn how to create a DES, since they have many applications.
 
 \section{Background}
-Our knowledge of parallel discrete event simulators (PDES) comes originally from the course lecture. Parallel DES help represent large-scale systems that are hard to understand, and which may require long run times if represented in real-time. A parallel DES should significantly reduce the run time. For instance, a simulation of air traffic could take a few minutes instead of a several years by looking at only specific events that are deemed important, and looking at them in parallel when possible. This could be applied to many other topics like communication networks or biology.\\
-\tab In class we talked about Rensselaer’s Optimistic Simulation System (ROSS) which runs Time Warp, a protocol that increases parallelism through rollback and anti-message mechanisms. This protocol scales very well in performance tests on RPI's Blue Gene/Q. We could have chosen to use ROSS to build our implementation, but we decided to create our simulator from scratch.
+Our knowledge of parallel discrete event simulators (PDES) comes originally from the course lecture. Parallel DES help represent large-scale systems that are hard to understand, and which may require long run times if represented in real-time. A parallel DES should significantly reduce the run time. For instance, a simulation of air traffic could take a few minutes instead of a several years by looking at only specific events that are deemed important, and looking at them in parallel when possible. This could be applied to many other topics like communication networks or biology. An old article \cite{Fujimoto:1990:PDE:84537.84545} that contains some of the information from class provided a good overview of what discrete event simulators can consist of.
+
+In class we talked about Rensselaer’s Optimistic Simulation System (ROSS) \cite{Barnes:2013:WSE:2486092.2486134} which runs Time Warp, a protocol that increases parallelism through rollback and anti-message mechanisms. This protocol scales very well in performance tests on RPI's Blue Gene/Q. We could have chosen to use ROSS to build our implementation, or looked into OMNeT++ \cite{Varga:2008:OOS:1416222.1416290}, which a popular open-source discrete event simulation environment, but we decided to create our simulator from scratch.
 
 \section{Implementation}
 
@@ -80,13 +81,17 @@ Our program worked with only 1 rank, but when multiple ranks were used, the prog
 
 \subsection{Final Implementation}
 
-We kept many of the same details from the initial implementation, but now there are only intersections and no streets. Intersections are where complicated right-of-way rules can show up, so reducing the traffic problem to intersections is still useful, and should result in a more efficient simulation. This also means we do not have to create street arrays, which needed a strange indexing system because of the combination of horizontal (east-west) and vertical (north-south) rows.
+We kept many of the same details from the initial implementation, but now there are only intersections and no streets. Intersections are where complicated right-of-way rules can show up, so reducing the traffic problem to intersections is still useful, and should result in a more efficient simulation. This also means we do not have to create street arrays, which needed a strange indexing system because of the combination of horizontal (east-west) and vertical (north-south) rows. Ideally there would be a way to account for the time it takes for cars to drive from one intersection to another, which we would implement given more time.
 
 Using only intersection structs and leaving no space on the street (which was used like a queue or buffer) makes synchronization more difficult because ranks on border a region which is controlled by a single rank must communicate regularly to find out if a car is coming along that intersection
 
 \section{Performance Results}
 
 \section{Analysis of Performance}
+
+\section{Team Organization}
+
+In our first version, Alex wrote all of the MPI code and the initial architecture, and Shoshana was working on updating intersections and streets according to traffic rules. Alex wrote most of the second version and Shoshana wrote the report. Both team members ran jobs on the Blue Gene and debugged.
 
 \section{Conclusion}
 
