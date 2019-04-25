@@ -248,56 +248,59 @@ int main(int argc, char *argv[])
     unsigned long dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
     printf("Rank %d: Tick %d: Distance left is %lu\n", mpi_myrank, 0, dist_left);
 
-    // intrsctn *cur_intrsctn_now, *cur_intrsctn_nxt;
-    // street *cur_streets_ew_now, *cur_streets_ns_now, *cur_streets_ew_nxt, *cur_streets_ns_nxt;
     // for loop of ticks
     for (size_t i = 0; i < num_ticks; ++i) {
-        // switch now and next
-        // if (i%2 == 0) {
-        //     cur_intrsctn_now = intrsctn_now;
-        //     cur_intrsctn_nxt = intrsctn_nxt;
-        //     cur_streets_ew_now = streets_ew_now; 
-        //     cur_streets_ns_now = streets_ns_now;
-        //     cur_streets_ns_nxt = streets_ew_nxt;
-        //     cur_streets_ns_nxt = streets_ns_nxt;
-        // } else {
-        //     cur_intrsctn_now = intrsctn_nxt;
-        //     cur_intrsctn_nxt = intrsctn_now;
-        //     cur_streets_ew_now = streets_ew_nxt; 
-        //     cur_streets_ns_now = streets_ns_nxt;
-        //     cur_streets_ew_nxt = streets_ew_now;
-        //     cur_streets_ns_nxt = streets_ns_now;
-        // }
-        
-        // send and receive (blocking)
-        // NEED TO SEND THE FIRST SLOT GOING SOUTH TO THE SOUTH
-        // NEED TO SEND THE FIRST SLOT GOING NORTH TO THE NORTH
-        pack_transfer(to_transfer_nrth, ghost_ns_nrth_now,
-                to_transfer_soth, ghost_ns_soth_now);
-        // bug here!
-        transfer(to_transfer_nrth, to_receive_nrth, to_transfer_soth, to_receive_soth,
-                mpi_myrank, mpi_commsize, mpi_car_type);
-        // NEED TO RECEIVE THE FIRST SLOT GOING SOUTH TO THE NORTH
-        // NEED TO RECEIVE THE FIRST SLOT GOING NORTH TO THE SOUTH
-        unpack_transfer(to_receive_nrth, ghost_ns_nrth_now,
-                to_receive_soth, ghost_ns_soth_now);
-        // update streets
-        // update east/west
-        update_streets(rpr*(SIDE_LENGTH-1), glbl_index, streets_ew_now, streets_ew_nxt, 0); // something in this function is wrong
-        // update north/south
-        update_streets((rpr-1)*SIDE_LENGTH, glbl_index, streets_ns_now, streets_ns_nxt, 1);
-        // update ghost rows
-        update_ghost_streets(SIDE_LENGTH, ghost_ns_nrth_now, ghost_ns_nrth_nxt, 0);
-        update_ghost_streets(SIDE_LENGTH, ghost_ns_soth_now, ghost_ns_soth_nxt, 1);
-        // run intersections
-        update_intersections(rpr, glbl_index, intrsctn_now, intrsctn_nxt, &r);
+        if (i%2 == 0) { // even tick
+            // send and receive (blocking)
+            // NEED TO SEND THE FIRST SLOT GOING SOUTH TO THE SOUTH
+            // NEED TO SEND THE FIRST SLOT GOING NORTH TO THE NORTH
+            pack_transfer(to_transfer_nrth, ghost_ns_nrth_now,
+                    to_transfer_soth, ghost_ns_soth_now);
+            // bug here!
+            transfer(to_transfer_nrth, to_receive_nrth, to_transfer_soth, to_receive_soth,
+                    mpi_myrank, mpi_commsize, mpi_car_type);
+            // NEED TO RECEIVE THE FIRST SLOT GOING SOUTH TO THE NORTH
+            // NEED TO RECEIVE THE FIRST SLOT GOING NORTH TO THE SOUTH
+            unpack_transfer(to_receive_nrth, ghost_ns_nrth_now,
+                    to_receive_soth, ghost_ns_soth_now);
+            // update streets
+            // update east/west
+            update_streets(rpr*(SIDE_LENGTH-1), glbl_index, streets_ew_now, streets_ew_nxt, 0); // something in this function is wrong
+            // update north/south
+            update_streets((rpr-1)*SIDE_LENGTH, glbl_index, streets_ns_now, streets_ns_nxt, 1);
+            // update ghost rows
+            update_ghost_streets(SIDE_LENGTH, ghost_ns_nrth_now, ghost_ns_nrth_nxt, 0);
+            update_ghost_streets(SIDE_LENGTH, ghost_ns_soth_now, ghost_ns_soth_nxt, 1);
+            // run intersections
+            update_intersections(rpr, glbl_index, intrsctn_now, intrsctn_nxt, &r);
 
-        unsigned long dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
-        unsigned long dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
-        unsigned long dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
-        unsigned long dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
-        unsigned long dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-        printf("Rank %d: Tick %d: Distance left is %lu\n", mpi_myrank, 0, dist_left);
+            unsigned long dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
+            unsigned long dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
+            unsigned long dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
+            unsigned long dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
+            unsigned long dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
+            printf("Rank %d: Tick %lu: Distance left is %lu\n", mpi_myrank, i, dist_left);
+        } else { // odd tick
+            // send and receive (blocking)
+            pack_transfer(to_transfer_nrth, ghost_ns_nrth_nxt,
+                    to_transfer_soth, ghost_ns_soth_nxt);
+            transfer(to_transfer_nrth, to_receive_nrth, to_transfer_soth, to_receive_soth,
+                    mpi_myrank, mpi_commsize, mpi_car_type);
+            unpack_transfer(to_receive_nrth, ghost_ns_nrth_nxt,
+                    to_receive_soth, ghost_ns_soth_nxt);
+            update_streets(rpr*(SIDE_LENGTH-1), glbl_index, streets_ew_nxt, streets_ew_now, 0); // something in this function is wrong
+            update_streets((rpr-1)*SIDE_LENGTH, glbl_index, streets_ns_nxt, streets_ns_now, 1);
+            update_ghost_streets(SIDE_LENGTH, ghost_ns_nrth_nxt, ghost_ns_nrth_now, 0);
+            update_ghost_streets(SIDE_LENGTH, ghost_ns_soth_nxt, ghost_ns_soth_now, 1);
+            update_intersections(rpr, glbl_index, intrsctn_nxt, intrsctn_now, &r);
+
+            unsigned long dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_nxt, (SIDE_LENGTH-1)*rpr);
+            unsigned long dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_nxt, SIDE_LENGTH*(rpr-1));
+            unsigned long dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_nxt, SIDE_LENGTH, 0) : 0;
+            unsigned long dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_nxt, SIDE_LENGTH, 1) : 0;
+            unsigned long dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
+            printf("Rank %d: Tick %lu: Distance left is %lu\n", mpi_myrank, i, dist_left);
+        }
 
     }
 #ifdef DEBUG
@@ -682,9 +685,8 @@ void update_ghost_streets(unsigned int n, street* ghost_now, street* ghost_nxt, 
 // input should be the even glbl_row_idx and even glbl_col_idx from update_intersections. Assume e_idx if is pointing west or north.
 int reached_dest(unsigned long glbl_row_idx, unsigned long glbl_col_idx, unsigned short idx, car *c, unsigned short es) {
     if ((glbl_row_idx == c->e_row || glbl_row_idx == c->e_row+1) && (glbl_col_idx == c->e_col)
-            && ((es && idx == c->e_idx) || (!es && idx == ROAD_CAP-1-c->e_idx))) {
+            && ((es && idx == c->e_idx) || (!es && idx == ROAD_CAP-1-c->e_idx)))
         return 1;
-    }
     return 0;
 }
 
@@ -842,8 +844,8 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
         unsigned long col_idx = 2*(i%SIDE_LENGTH);
         reset_intrsctn(intrsctn_now[i], intrsctn_nxt[i], r);
         
-        // printf("before\n");
-        // print_intersection(intrsctn_now[i]);
+        printf("before\n");
+        print_intersection(intrsctn_now[i]);
         
         // MOVE CAR ON NORTHERN SIDE OF INTERSECTION
         // Check where car is heading.
@@ -861,7 +863,7 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
                 // now other cars can't take that spot, make sure it's marked!
                 // printf("north moved right\n");
                 if (reached_dest(row_idx-1, col_idx, ROAD_CAP-1, c, 0)) printf("reached destination! %lu %lu %d\n", c->e_row, col_idx, ROAD_CAP-1);
-            } else if ((c->e_row == row_idx || c->e_row == row_idx+1) && r->nrth[LEFT]) { // go east/left? could be at destination street.
+            } else if ((c->e_row == row_idx || c->e_row == row_idx+1) && c->e_col > col_idx && r->nrth[LEFT]) { // go east/left? could be at destination street.
                 move_east(&intrsctn_nxt[i], c, r); // should I be yielding the right of way?
                 left_turn = 1; // no other cars can move
                 // printf("north moved left\n");
@@ -910,14 +912,15 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
 
         }
 
-        // MOVE CAR ON SOUTH SIDE OF INTERSECTION
+        // MOVE CAR ON SOUTHERN SIDE OF INTERSECTION
         // If rows and columns equal:
         // south: If row is even, turn right. If row is odd, doesn't make sense, gone too far.
         if (intrsctn_now[i].soth && intrsctn_now[i].soth->go_wn[block_end]) {
 
             car *c = intrsctn_now[i].soth->go_wn[block_end];
-            // east or west?
-            if (!left_turn && (c->e_row == row_idx || c->e_row == row_idx+1) && c->e_col <= col_idx && r->soth[RIGHT]) { // go east/right?
+            // east or west? do I need to separate out the row and row+1 cases?
+            if (!left_turn && (((c->e_row == row_idx || c->e_row == row_idx+1) && c->e_col < col_idx && r->soth[RIGHT]) ||
+                    (c->e_row == row_idx && c->e_col == col_idx))) { // go east/right?
                 move_east(&intrsctn_nxt[i], c, r);
                 // printf("south moved right\n");
                 if (reached_dest(row_idx, col_idx, ROAD_CAP-1, c, 1)) printf("reached destination! %lu %lu %d\n", c->e_row, col_idx, ROAD_CAP-1);
@@ -939,6 +942,7 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
 
         }
 
+        // there is something here causing a bug!
         // MOVE CAR ON WESTERN SIDE OF INTERSECTION
         // When row and column equal:
         // west: If row is even, go straight. If row is odd, turn right.
@@ -950,8 +954,9 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
                 move_soth(&intrsctn_nxt[i], c, r);
                 // printf("west moved right\n");
                 if (reached_dest(row_idx, col_idx, ROAD_CAP-1, c, 1)) printf("reached destination! %lu %lu %d\n", c->e_row, col_idx, ROAD_CAP-1);
-            } else if (!left_turn && c->e_col == col_idx && r->west[LEFT]) { // up?
+            } else if (!left_turn && c->e_col == col_idx && c->e_row < row_idx && r->west[LEFT]) { // up?
                 move_nrth(&intrsctn_nxt[i], c, r);
+                left_turn = 1;
                 // printf("west moved left\n");
                 if (reached_dest(row_idx, col_idx-1, ROAD_CAP-1, c, 0)) printf("reached destination! %lu %lu %d\n", c->e_row, col_idx, ROAD_CAP-1);
             }
@@ -966,10 +971,10 @@ void update_intersections(unsigned int rpr, unsigned long glbl_row_idx, intrsctn
             }
 
         }
-        // printf("east: %d\nsouth: %d\nwest: %d\nleft turn: %d\n\n", east, south, west, left_turn);
-        // printf("after\n");
-        // print_intersection(intrsctn_nxt[i]);
-        // printf("\n");
+
+        printf("after\n");
+        print_intersection(intrsctn_nxt[i]);
+        printf("\n");
         left_turn = 0;
     }
 
