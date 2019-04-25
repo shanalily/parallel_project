@@ -19,7 +19,8 @@
 #else
 #define GetTimeBase MPI_Wtime            
 #endif
-// #define DEBUG 1
+
+#define DEBUG 1
 // #define DEBUG_IS 1
 
 #include <assert.h>
@@ -349,8 +350,6 @@ int main(int argc, char *argv[])
         tmp2 = intrsctn_now;
         intrsctn_now = intrsctn_nxt;
         intrsctn_nxt = tmp2;
-        
-
 
         dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
         dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
@@ -805,8 +804,6 @@ void update_streets(unsigned int n, street *streets_now, street *streets_nxt,
 // If row is even, EW/WE. If row is odd, SN/NS. It doesn't matter which side of street the car is on, but index needs to be adjusted accordingly.
 // input should be the even glbl_row_idx and even glbl_col_idx from update_intersections. Assume e_idx if is pointing west or north.
 int reached_dest(unsigned long glbl_row_idx, unsigned long glbl_col_idx, unsigned short idx, car *c, unsigned short es) {
-    // if ((glbl_row_idx == c->e_row || glbl_row_idx == c->e_row+1) && (glbl_col_idx == c->e_col)
-    //         && ((es && idx == c->e_idx) || (!es && idx == ROAD_CAP-1-c->e_idx)))
     if (glbl_row_idx == c->e_row && glbl_col_idx == c->e_col
             && ((es && idx == c->e_idx) || (!es && idx == ROAD_CAP-1-c->e_idx)))
         return 1;
