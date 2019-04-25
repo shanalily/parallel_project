@@ -22,7 +22,7 @@
 #define SIZE 4
 #endif
 
-#define NUM_TICKS 2
+#define NUM_TICKS 3
 #define NPI 3
 #define FROM_S 1
 #define FROM_N 0
@@ -72,7 +72,9 @@ int reachdest(int num, int* is, uint g_i, int i_strt) {
 void exchange_rows(int mpi_myrank, int mpi_commsize, int* is, int rpr){
     MPI_Request north;
     MPI_Request south;
-    MPI_Request request;
+    MPI_Request request_n;
+    MPI_Request request_s;
+
     int* is_south_recv = &is[(rpr+(mpi_myrank!=0))*SIZE*NPI];
     int* is_south_send = &is[(rpr-1+(mpi_myrank!=0))*SIZE*NPI];
     int* is_north_recv = &is[0];
@@ -86,14 +88,22 @@ void exchange_rows(int mpi_myrank, int mpi_commsize, int* is, int rpr){
         MPI_Irecv(is_south_recv, SIZE*NPI, MPI_INT, mpi_myrank+1, 1, MPI_COMM_WORLD, &south);
     }
     if (mpi_myrank != 0) {
-        MPI_Isend(is_north_send, SIZE*NPI, MPI_INT, mpi_myrank-1, 1, MPI_COMM_WORLD, &request);
+        MPI_Isend(is_north_send, SIZE*NPI, MPI_INT, mpi_myrank-1, 1, MPI_COMM_WORLD, &request_n);
     }
     if (mpi_myrank != mpi_commsize - 1) {
-        MPI_Isend(is_south_send, SIZE*NPI, MPI_INT, mpi_myrank+1, 0, MPI_COMM_WORLD, &request);
+        MPI_Isend(is_south_send, SIZE*NPI, MPI_INT, mpi_myrank+1, 0, MPI_COMM_WORLD, &request_s);
     }
 
+    // printf("a\n");
+    if(mpi_myrank != 0) MPI_Wait(&request_n, MPI_STATUS_IGNORE);
+    if(mpi_myrank != mpi_commsize -1) MPI_Wait(&request_s, MPI_STATUS_IGNORE);
+    // printf("b\n");
     if(mpi_myrank != 0) MPI_Wait(&north, MPI_STATUS_IGNORE);
+    // printf("c\n");
+
     if(mpi_myrank != mpi_commsize -1) MPI_Wait(&south, MPI_STATUS_IGNORE);
+    // printf("d\n");
+
 }
 
 void update_i(int i, int n, int s, int w, int e, int* i_now, int* i_nxt){
@@ -113,7 +123,7 @@ void update_i(int i, int n, int s, int w, int e, int* i_now, int* i_nxt){
         i_nxt[n_i+2] = i_now[i+2];
         
     }
-    else if(s && i_now[s_i] == 0 && i_nxt[s_i] == 0) {
+        else if(s && i_now[s_i] == 0 && i_nxt[s_i] == 0) {
         i_nxt[s_i] = i_now[i];
         i_nxt[s_i+1] = i_now[i+1];
         i_nxt[s_i+2] = i_now[i+2];
@@ -145,14 +155,17 @@ void answer_rqsts(MPI_Request* rqsts, int i_strt, int* i_now, int* i_nxt, int ra
             MPI_Test(&rqsts[j], &flag, MPI_STATUS_IGNORE);
             idx = i_strt+j*NPI;
             if(flag) {
+                // printf("Answering %d\n", j);
+                // printf("Sending to receive on tag %d\n", SIZE+j);
                 answered[j] = 1;
                 if(i_now[idx] == 0 && i_nxt[idx] == 0){
                     i_nxt[idx] = 1;
-                    MPI_Isend(&i_nxt[idx], 1, MPI_INT, rank, j, MPI_COMM_WORLD, &request);
+                    MPI_Isend(&i_nxt[idx], 1, MPI_INT, rank, SIZE+j, MPI_COMM_WORLD, &request);
                 }
                 else {
                     int tmp = 0;
-                    MPI_Isend(&tmp, 1, MPI_INT, rank, j, MPI_COMM_WORLD, &request);
+                    // printf("Sending to receive on tag %d\n", j);
+                    MPI_Isend(&tmp, 1, MPI_INT, rank, SIZE+j, MPI_COMM_WORLD, &request);
                 }
             }
         }
@@ -169,6 +182,7 @@ int recv_rqsts(MPI_Request* rqsts, int i_strt, int* i_now, int* i_nxt, int* answ
             int flag;
             MPI_Test(&rqsts[j], &flag, MPI_STATUS_IGNORE);
             if(flag) {
+                // printf("Receiving %d\n", j);
                 received[j] = 1;
                 n_recv+=1;
                 idx = i_strt+j*NPI;
@@ -215,7 +229,7 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
 
 
     if(mpi_myrank != 0){
-        printf("Rank %d Receiving on tag %d\n", mpi_myrank, 2*SIZE+1);
+        // printf("Rank %d Receiving on tag %d\n", mpi_myrank, 2*SIZE+1);
         MPI_Irecv(&done_i_n, 1, MPI_INT, mpi_myrank-1, 2*SIZE+1, MPI_COMM_WORLD, &done_n);
         for(size_t i = 0; i < SIZE; i++)
         {
@@ -224,7 +238,7 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
         }
     }
     if(mpi_myrank != mpi_commsize-1){
-        printf("Rank %d Receiving on tag %d\n", mpi_myrank, 2*SIZE+2);
+        // printf("Rank %d Receiving on tag %d\n", mpi_myrank, 2*SIZE+2);
         MPI_Irecv(&done_i_s, 1, MPI_INT, mpi_myrank+1, 2*SIZE+2, MPI_COMM_WORLD, &done_s);
         for(size_t i = 0; i < SIZE; i++)
         {
@@ -254,7 +268,7 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
             num_recv -= recv_rqsts(recv_rqsts_n, i_strt, i_now, i_nxt, answers_n, 0, g_i, received_n);
         }
         if(mpi_myrank != mpi_commsize-1){
-            num_recv -= recv_rqsts(recv_rqsts_s, i_strt+rpr*SIZE*NPI, i_now, i_nxt, answers_s, 0, g_i, received_s);
+            num_recv -= recv_rqsts(recv_rqsts_s, i_strt+rpr*SIZE*NPI, i_now, i_nxt, answers_s, 0, g_i+rpr*SIZE*NPI, received_s);
         }
 
         r = (i-i_strt)/(NPI*SIZE) + g_i;
@@ -269,13 +283,15 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
             if(n && (r - g_i) == 0) {
                 // save north for interprocess
                 int tmp = (int) i;
-                MPI_Isend(&tmp, 1, MPI_INT, mpi_myrank-1, tmp, MPI_COMM_WORLD, &request);
+                // printf("Sending to answer on tag %d\n", c);
+                MPI_Isend(&tmp, 1, MPI_INT, mpi_myrank-1, c, MPI_COMM_WORLD, &request);
                 num_recv += 1;
             }
             else if (s && (r - g_i) == (rpr - 1)){
                 // save south for interprocess
                 int tmp = (int) i;
-                MPI_Isend(&tmp, 1, MPI_INT, mpi_myrank+1, tmp, MPI_COMM_WORLD, &request);
+                // printf("Sending to answer on tag %d\n", c);
+                MPI_Isend(&tmp, 1, MPI_INT, mpi_myrank+1, c, MPI_COMM_WORLD, &request);
                 num_recv += 1;
             }
 
@@ -286,12 +302,12 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
 
 
     }
-    printf("Rank %d: num_recv %d\n", mpi_myrank, num_recv);
+    // printf("Rank %d: num_recv %d\n", mpi_myrank, num_recv);
 
     int flag_n = 0;
     int flag_s = 0;
     int done_recv = 0;
-    while(!flag_n || !flag_s) {
+    while(!flag_n || !flag_s || !done_recv) {
         if(mpi_myrank != 0){
             answer_rqsts(send_rqsts_n, i_strt, i_now, i_nxt, mpi_myrank-1, answered_n);
         }
@@ -305,29 +321,37 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
             num_recv -= recv_rqsts(recv_rqsts_n, i_strt, i_now, i_nxt, answers_n, 0, g_i, received_n);
         }
         if(!done_recv && mpi_myrank != mpi_commsize-1){
-            num_recv -= recv_rqsts(recv_rqsts_s, i_strt+rpr*SIZE*NPI, i_now, i_nxt, answers_s, 0, g_i, received_s);
+            num_recv -= recv_rqsts(recv_rqsts_s, i_strt+rpr*SIZE*NPI, i_now, i_nxt, answers_s, 0, g_i+rpr*SIZE*NPI, received_s);
         }
 
-        if(num_recv >= 0 && done_recv == 0){
+        if(num_recv == 0 && done_recv == 0){
+            done_recv = 1;
             if(mpi_myrank != 0){
-                printf("Rank %d sending on tag %d\n", mpi_myrank, 2*SIZE+2);
+                // printf("Rank %d sending on tag %d\n", mpi_myrank, 2*SIZE+2);
                 MPI_Isend(&done_i_s, 1, MPI_INT, mpi_myrank-1, 2*SIZE+2, MPI_COMM_WORLD, &request);
             }
             if(mpi_myrank != mpi_commsize-1){
-                printf("Rank %d sending on tag %d\n", mpi_myrank, 2*SIZE+1);
+                // printf("Rank %d sending on tag %d\n", mpi_myrank, 2*SIZE+1);
                 MPI_Isend(&done_i_n, 1, MPI_INT, mpi_myrank+1, 2*SIZE+1, MPI_COMM_WORLD, &request);
             }
             for(size_t i = 0; i < SIZE; i++)
             {
                 if(mpi_myrank != 0){
-                    if(!answered_n[i]) MPI_Request_free(&recv_rqsts_n[i]);
-                    if(!received_n[i]) MPI_Request_free(&send_rqsts_n[i]);
+                    if(received_n[i] == 0) {
+                        // printf("%d\n", i);
+                        // MPI_Request_free(&recv_rqsts_n[i]);
+                        int junk = 0;
+                        MPI_Isend(&junk, 1, MPI_INT, mpi_myrank-1, i, MPI_COMM_WORLD, &request);
+                    }
                 }
                 if(mpi_myrank != mpi_commsize-1){
-                    if(!received_s[i]) MPI_Request_free(&recv_rqsts_s[i]);
-                    if(!answered_s[i]) MPI_Request_free(&send_rqsts_s[i]);
+                    if(received_s[i] == 0) {
+                        // printf("%d\n", i);
+                        // MPI_Request_free(&recv_rqsts_s[i]);
+                        int junk = 0;
+                        MPI_Isend(&junk, 1, MPI_INT, mpi_myrank+1, i, MPI_COMM_WORLD, &request);
+                    }
                 }
-
             }
         }
         if(mpi_myrank != 0 && !flag_n){
@@ -342,11 +366,35 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
 
         }
     }
-    printf("Rank %d Free from loop\n", mpi_myrank);
+    // printf("Rank %d Free from loop\n", mpi_myrank);
+
+    for(size_t i = 0; i < SIZE; i++)
+    {
+        if(mpi_myrank != 0){
+            if(answered_n[i] == 0) {
+                // MPI_Request_free(&send_rqsts_n[i]);
+                int junk = 0;
+                MPI_Isend(&junk, 1, MPI_INT, mpi_myrank-1, i+SIZE, MPI_COMM_WORLD, &request);
+            }
+        }
+        if(mpi_myrank != mpi_commsize-1){
+            if(answered_s[i] == 0) {
+                // MPI_Request_free(&send_rqsts_s[i]);
+                int junk = 0;
+                MPI_Isend(&junk, 1, MPI_INT, mpi_myrank+1, i+SIZE, MPI_COMM_WORLD, &request);
+            }
+        }
+    }
 
     
-
-
+    free(answers_n); 
+    free(answers_s);
+    free(recv_n); 
+    free(recv_s); 
+    free(answered_n); 
+    free(answered_s);
+    free(received_n); 
+    free(received_s);
 }
 
 void prnt_ints(unsigned int rpr, unsigned int glbl_index, int* intrsctns, int g_b) {
@@ -357,6 +405,12 @@ void prnt_ints(unsigned int rpr, unsigned int glbl_index, int* intrsctns, int g_
             intrsctns[i*SIZE*NPI+3], intrsctns[i*SIZE*NPI+4], intrsctns[i*SIZE*NPI+5],
             intrsctns[i*SIZE*NPI+6], intrsctns[i*SIZE*NPI+7], intrsctns[i*SIZE*NPI+8],
             intrsctns[i*SIZE*NPI+9], intrsctns[i*SIZE*NPI+10], intrsctns[i*SIZE*NPI+11]);
+    }
+}
+
+void clear_is(int n, int* is){
+    for(size_t i =0; i < n*NPI; i+= 1) {
+        is[i] = 0;
     }
 }
 
@@ -397,6 +451,7 @@ int main(int argc, char *argv[])
 
 
     for (size_t i = 1; i < NUM_TICKS; ++i) {
+
         // reach destination
         reachdest(rpr*SIZE, intrsctns_now, glbl_index, i_strt);
         // do the exchange 
@@ -408,9 +463,15 @@ int main(int argc, char *argv[])
         intrsctns_now = intrsctns_nxt;
         intrsctns_nxt = tmp;
 
+        MPI_Barrier( MPI_COMM_WORLD );
+
+        clear_is(SIZE*(rpr + ghosts), intrsctns_nxt);
+        if(i==2 || i==1) {
+            prnt_ints(rpr + ghosts, glbl_index, intrsctns_now, mpi_myrank != 0);
+        }
+
     }
 
-    // prnt_ints(rpr + ghosts, glbl_index, intrsctns_now, mpi_myrank != 0);
 
     MPI_Barrier( MPI_COMM_WORLD );
     if (mpi_myrank == 0) {
@@ -418,6 +479,7 @@ int main(int argc, char *argv[])
         g_time_in_secs = ((double)(g_end_cycles - g_start_cycles))/g_processor_frequency;
         printf("Sim time: %f\n", g_time_in_secs);
     }
+    MPI_Barrier( MPI_COMM_WORLD );
 
     free( intrsctns_now );
     free( intrsctns_nxt );
