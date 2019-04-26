@@ -189,7 +189,7 @@ int recv_rqsts(MPI_Request* rqsts, int i_strt, int* i_now, int* i_nxt, int* answ
         if(!received[j]){
             int flag;
             MPI_Test(&rqsts[j], &flag, MPI_STATUS_IGNORE);
-            if(flag) {
+            if(flag && answers[j]!=-1) {
                 // printf("Receiving %d\n", j);
                 received[j] = 1;
                 n_recv+=1;
@@ -379,16 +379,16 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
                     if(received_n[i] == 0) {
                         // printf("%d\n", i);
                         // MPI_Request_free(&recv_rqsts_n[i]);
-                        int junk = 0;
-                        MPI_Isend(&junk, 1, MPI_INT, mpi_myrank-1, i, MPI_COMM_WORLD, &request);
+                        int junk[] = {-1, -1, -1};
+                        MPI_Isend(junk, 1, MPI_INT, mpi_myrank-1, i, MPI_COMM_WORLD, &request);
                     }
                 }
                 if(mpi_myrank != mpi_commsize-1){
                     if(received_s[i] == 0) {
                         // printf("%d\n", i);
                         // MPI_Request_free(&recv_rqsts_s[i]);
-                        int junk = 0;
-                        MPI_Isend(&junk, 1, MPI_INT, mpi_myrank+1, i, MPI_COMM_WORLD, &request);
+                        int junk[] = {-1, -1, -1};
+                        MPI_Isend(junk, 1, MPI_INT, mpi_myrank+1, i, MPI_COMM_WORLD, &request);
                     }
                 }
             }
@@ -404,8 +404,12 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
             // printf("Rank %d testing done %d\n", mpi_myrank, flag_s);
 
         }
+        // if(mpi_myrank == 0 || mpi_myrank == 1){
+            // ALL MISSING ONE RECEIVE
+            printf("Rank %d loop status %d %d %d %d\n", mpi_myrank, flag_n, flag_s, num_recv, done_recv);
+        // }
     }
-    // printf("Rank %d Free from loop\n", mpi_myrank);
+    printf("Rank %d Free from loop\n", mpi_myrank);
 
     for(size_t i = 0; i < SIZE; i++)
     {
@@ -493,13 +497,16 @@ int main(int argc, char *argv[])
 
 
     for (size_t i = 1; i < NUM_TICKS; ++i) {
-        printf("%d\n", i);
+        printf("Dest %d\n", i);
 
         // reach destination
         reachdest(rpr*SIZE, intrsctns_now, glbl_index, i_strt, i);
+        printf("rows %d\n", i);
         // do the exchange 
         exchange_rows(mpi_myrank, mpi_commsize, intrsctns_now, rpr);
+        printf("intr %d\n", i);
         update_intersections(rpr*SIZE, intrsctns_now, intrsctns_nxt, glbl_index, i_strt ,rpr);
+        printf("end %d\n", i);
 
         // clear rows
         int* tmp = intrsctns_now;
