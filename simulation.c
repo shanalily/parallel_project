@@ -21,8 +21,12 @@
 #endif
 
 // #define DEBUG 1
+<<<<<<< HEAD
 #define DEBUG_IS 1
 
+=======
+// #define DEBUG_IS 1
+>>>>>>> 52df766bcf78080db41f49c81aa2cc42a3a5e078
 #include <assert.h>
 
 /***************************************************************************/
@@ -32,7 +36,11 @@
 #ifdef BGQ
 #define SIDE_LENGTH 32768
 #else
+<<<<<<< HEAD
 #define SIDE_LENGTH 64
+=======
+#define SIDE_LENGTH 128
+>>>>>>> 52df766bcf78080db41f49c81aa2cc42a3a5e078
 #endif
 
 
@@ -95,6 +103,12 @@ typedef struct right_of_way {
 /***************************************************************************/
 /* Global Vars *************************************************************/
 /***************************************************************************/
+
+double g_time_in_secs = 0;
+double g_processor_frequency = 1600000000.0; // processing speed for BG/Q
+unsigned long long g_start_cycles=0;
+unsigned long long g_end_cycles=0;
+
 
 /***************************************************************************/
 /* Function Decs ***********************************************************/
@@ -183,7 +197,6 @@ int main(int argc, char *argv[])
     // The pointers will switch after every tick
     
     // array of streets
-    printf("%lu %lu %lu\n", sizeof(street), sizeof(intrsctn), sizeof(car));
     street* streets_ew_now = calloc(rpr*(SIDE_LENGTH-1), sizeof(street));
     street* streets_ew_nxt = calloc(rpr*(SIDE_LENGTH-1), sizeof(street));
     street* streets_ns_now = calloc((rpr-1)*SIDE_LENGTH, sizeof(street));
@@ -212,7 +225,6 @@ int main(int argc, char *argv[])
             ghost_ns_nrth_now, ghost_ns_soth_now, mpi_myrank, mpi_commsize);
     mk_grid(rpr, intrsctn_nxt, streets_ns_nxt, streets_ew_nxt,
             ghost_ns_nrth_nxt, ghost_ns_soth_nxt, mpi_myrank, mpi_commsize);
-
 
 // check if grids are valid
 #ifdef DEBUG
@@ -243,14 +255,18 @@ int main(int argc, char *argv[])
 #endif
     
     MPI_Barrier( MPI_COMM_WORLD );
-
+    if (mpi_myrank == 0) {
+        g_start_cycles = GetTimeBase();
+    }
+    MPI_Barrier( MPI_COMM_WORLD );
+#ifdef DEBUG
     unsigned long dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
     unsigned long dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
     unsigned long dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
     unsigned long dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
     unsigned long dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
     printf("Rank %d: Tick %u: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, 0, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
-
+#endif
     // for loop of ticks
     for (size_t i = 1; i < num_ticks; ++i) {
         
@@ -304,14 +320,14 @@ int main(int argc, char *argv[])
         tmp2 = intrsctn_now;
         intrsctn_now = intrsctn_nxt;
         intrsctn_nxt = tmp2;
-
+    #ifdef DEBUG
         dist_left_ew = total_grid_dist_to_travel(glbl_index, streets_ew_now, (SIDE_LENGTH-1)*rpr);
         dist_left_ns = total_grid_dist_to_travel(glbl_index+1, streets_ns_now, SIDE_LENGTH*(rpr-1));
         dist_left_gn = mpi_myrank != 0 ? total_grid_dist_to_travel_ghost(glbl_index-1, ghost_ns_nrth_now, SIDE_LENGTH, 0) : 0;
         dist_left_gs = mpi_myrank != mpi_commsize ? total_grid_dist_to_travel_ghost(glbl_index+2*rpr-1, ghost_ns_soth_now, SIDE_LENGTH, 1) : 0;
         dist_left = dist_left_ew+dist_left_ns+dist_left_gn+dist_left_gs;
-        printf("Rank %d: Tick %lu: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
-
+        printf("Rank %d: Tick %u: Cars left is %lu %lu %lu %lu %lu\n", mpi_myrank, i, dist_left_ew, dist_left_ns, dist_left_gn, dist_left_gs, dist_left);
+    #endif
     }
     printf("rank %d exited loop\n", mpi_myrank);
 #ifdef DEBUG
@@ -321,6 +337,12 @@ int main(int argc, char *argv[])
             ghost_ns_nrth_nxt, ghost_ns_soth_nxt);
     assert(car_count == check_car_count(rpr, intrsctn_nxt));
 #endif
+    MPI_Barrier( MPI_COMM_WORLD );
+    if (mpi_myrank == 0) {
+        g_end_cycles = GetTimeBase();
+        g_time_in_secs = ((double)(g_end_cycles - g_start_cycles))/g_processor_frequency;
+        printf("Sim time: %f\n", g_time_in_secs);
+    }
 
     // frees
     for(size_t i = 0; i < rpr*(SIDE_LENGTH-1); i++)
@@ -687,12 +709,16 @@ void streets_check_dest(unsigned int n, unsigned long glbl_row_idx, street *stre
             // }
             
             if (check_se && streets[i].go_es[j] && reached_dest(row_idx, col_idx, j, streets[i].go_es[j], 1)) {
+            #ifdef DEBUG
                 printf("reached destination! %lu %lu %lu\n", row_idx, col_idx, j);
+            #endif
                 free(streets[i].go_es[j]);
                 streets[i].go_es[j] = NULL;
             }
             if (check_nw && streets[i].go_wn[j] && reached_dest(row_idx, col_idx, j, streets[i].go_wn[j], 0)) {
+            #ifdef DEBUG
                 printf("reached destination! %lu %lu %lu\n", row_idx, col_idx, j);
+            #endif
                 free(streets[i].go_wn[j]);
                 streets[i].go_wn[j] = NULL;
             }
