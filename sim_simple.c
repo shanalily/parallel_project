@@ -19,10 +19,10 @@
 #ifdef BGQ
 #define SIZE 32768
 #else
-#define SIZE 4
+#define SIZE 16
 #endif
 
-#define NUM_TICKS 3
+#define NUM_TICKS 256
 #define NPI 3
 #define FROM_S 1
 #define FROM_N 0
@@ -54,7 +54,7 @@ void mk_cars(int n, float proportion, int* intrsctns, unsigned int g_i, int i_st
     
 }
 
-int reachdest(int num, int* is, uint g_i, int i_strt) {
+int reachdest(int num, int* is, uint g_i, int i_strt, int tick) {
     int r, c;
     int sum = 0;
     for(size_t i =i_strt; i < i_strt + num*NPI; i+= NPI) {
@@ -62,7 +62,7 @@ int reachdest(int num, int* is, uint g_i, int i_strt) {
         c = ((i-i_strt)%(NPI*SIZE))/NPI;
         if(is[i] != 0 && is[i+1] == r && is[i+2] == c) {
             sum+=1;
-            printf("%d %d has Arrived!\n", r, c);
+            printf("TICK %d: %d %d has Arrived!\n", tick, r, c);
             is[i] = 0;
         }
     }
@@ -106,6 +106,10 @@ void exchange_rows(int mpi_myrank, int mpi_commsize, int* is, int rpr){
 
 }
 
+void to_n_only_s() {
+
+}
+
 void update_i(int i, int n, int s, int w, int e, int* i_now, int* i_nxt){
     // indexes
     
@@ -123,7 +127,7 @@ void update_i(int i, int n, int s, int w, int e, int* i_now, int* i_nxt){
         i_nxt[n_i+2] = i_now[i+2];
         
     }
-        else if(s && i_now[s_i] == 0 && i_nxt[s_i] == 0) {
+    else if(s && i_now[s_i] == 0 && i_nxt[s_i] == 0) {
         i_nxt[s_i] = i_now[i];
         i_nxt[s_i+1] = i_now[i+1];
         i_nxt[s_i+2] = i_now[i+2];
@@ -145,7 +149,8 @@ void update_i(int i, int n, int s, int w, int e, int* i_now, int* i_nxt){
     }
 }
 
-void answer_rqsts(MPI_Request* rqsts, int i_strt, int* i_now, int* i_nxt, int rank, int* answered){
+void answer_rqsts(MPI_Request* rqsts, int i_strt, int* i_now, int* i_nxt, int rank, 
+        int* answered, int* rcvn){
     MPI_Request request;
     int idx;
     for(size_t j = 0; j < SIZE; j++)
@@ -158,8 +163,11 @@ void answer_rqsts(MPI_Request* rqsts, int i_strt, int* i_now, int* i_nxt, int ra
                 // printf("Answering %d\n", j);
                 // printf("Sending to receive on tag %d\n", SIZE+j);
                 answered[j] = 1;
+                // printf("Answered at %d, %d %d %d\n", j*NPI, rcvn[j*NPI], rcvn[j*NPI+1], rcvn[j*NPI+2]);
                 if(i_now[idx] == 0 && i_nxt[idx] == 0){
-                    i_nxt[idx] = 1;
+                    i_nxt[idx] = rcvn[j*NPI];
+                    i_nxt[idx+1] = rcvn[j*NPI+1];
+                    i_nxt[idx+2] = rcvn[j*NPI+2];
                     MPI_Isend(&i_nxt[idx], 1, MPI_INT, rank, SIZE+j, MPI_COMM_WORLD, &request);
                 }
                 else {
@@ -192,6 +200,17 @@ int recv_rqsts(MPI_Request* rqsts, int i_strt, int* i_now, int* i_nxt, int* answ
                 s = r!=SIZE-1 && i_now[idx+1] > r && ((n_s == 1 && answers[j]) || n_s == 0);
                 w = c!=0 && i_now[idx+2] < c;
                 e = c!=SIZE-1 && i_now[idx+2] > c;
+                // inject some randomness
+                if(n+s+e+w==1 && GenVal(r) > .8){
+                    if(n) {
+                        if(c!=0) w = 1;
+                        else e=1;
+                    }
+                    else if(s) {
+                        if(c!=SIZE-1) e = 1;
+                        else w=1;
+                    }
+                }
                 update_i(idx, n, s, w, e, i_now, i_nxt);
             }
         }
@@ -215,8 +234,8 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
     MPI_Request request;
     int* answers_n = calloc(SIZE, sizeof(int)); 
     int* answers_s = calloc(SIZE, sizeof(int));
-    int* recv_n = calloc(SIZE, sizeof(int)); 
-    int* recv_s = calloc(SIZE, sizeof(int)); 
+    int* recv_n = calloc(SIZE*NPI, sizeof(int)); 
+    int* recv_s = calloc(SIZE*NPI, sizeof(int)); 
     int* answered_n = calloc(SIZE, sizeof(int)); 
     int* answered_s = calloc(SIZE, sizeof(int));
     int* received_n = calloc(SIZE, sizeof(int)); 
@@ -233,7 +252,7 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
         MPI_Irecv(&done_i_n, 1, MPI_INT, mpi_myrank-1, 2*SIZE+1, MPI_COMM_WORLD, &done_n);
         for(size_t i = 0; i < SIZE; i++)
         {
-            MPI_Irecv(&recv_n[i], 1, MPI_INT, mpi_myrank-1, i, MPI_COMM_WORLD, &send_rqsts_n[i]);
+            MPI_Irecv(&recv_n[i*NPI], NPI, MPI_INT, mpi_myrank-1, i, MPI_COMM_WORLD, &send_rqsts_n[i]);
             MPI_Irecv(&answers_n[i], 1, MPI_INT, mpi_myrank-1, SIZE+i, MPI_COMM_WORLD, &recv_rqsts_n[i]);
         }
     }
@@ -242,7 +261,7 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
         MPI_Irecv(&done_i_s, 1, MPI_INT, mpi_myrank+1, 2*SIZE+2, MPI_COMM_WORLD, &done_s);
         for(size_t i = 0; i < SIZE; i++)
         {
-            MPI_Irecv(&recv_s[i], 1, MPI_INT, mpi_myrank+1, i, MPI_COMM_WORLD, &send_rqsts_s[i]);
+            MPI_Irecv(&recv_s[i*NPI], NPI, MPI_INT, mpi_myrank+1, i, MPI_COMM_WORLD, &send_rqsts_s[i]);
             MPI_Irecv(&answers_s[i], 1, MPI_INT, mpi_myrank+1, SIZE+i, MPI_COMM_WORLD, &recv_rqsts_s[i]);
         }
     }
@@ -256,10 +275,10 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
         //   IF SPOT is open tell them and mark it used
 
         if(mpi_myrank != 0){
-            answer_rqsts(send_rqsts_n, i_strt, i_now, i_nxt, mpi_myrank-1, answered_n);
+            answer_rqsts(send_rqsts_n, i_strt, i_now, i_nxt, mpi_myrank-1, answered_n, recv_n);
         }
         if(mpi_myrank != mpi_commsize-1){
-            answer_rqsts(send_rqsts_s, i_strt+rpr*SIZE*NPI, i_now, i_nxt, mpi_myrank+1, answered_s);
+            answer_rqsts(send_rqsts_s, i_strt+(rpr-1)*SIZE*NPI, i_now, i_nxt, mpi_myrank+1, answered_s, recv_s);
         }
         // check for answered requests
         //   IF SPOT is open use it like normal
@@ -268,7 +287,7 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
             num_recv -= recv_rqsts(recv_rqsts_n, i_strt, i_now, i_nxt, answers_n, 0, g_i, received_n);
         }
         if(mpi_myrank != mpi_commsize-1){
-            num_recv -= recv_rqsts(recv_rqsts_s, i_strt+rpr*SIZE*NPI, i_now, i_nxt, answers_s, 0, g_i+rpr*SIZE*NPI, received_s);
+            num_recv -= recv_rqsts(recv_rqsts_s, i_strt+(rpr-1)*SIZE*NPI, i_now, i_nxt, answers_s, 1, g_i, received_s);
         }
 
         r = (i-i_strt)/(NPI*SIZE) + g_i;
@@ -279,23 +298,43 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
             s = r!=SIZE-1 && i_now[i+1] > r;
             w = c!=0 && i_now[i+2] < c;
             e = c!=SIZE-1 && i_now[i+2] > c;
+            // inject some randomness
+            if(n+s+e+w==1 && GenVal(r) > .8){
+                if(n) {
+                    if(c!=0) w = 1;
+                    else e=1;
+                }
+                else if(s) {
+                    if(c!=SIZE-1) e = 1;
+                    else w=1;
+                }
+                else if(w) {
+                    if(r!=0) n = 1;
+                    else s=1;
+                }
+                else if(e) {
+                    if(r!=SIZE-1) s = 1;
+                    else n=1;
+                }
+            }
 
             if(n && (r - g_i) == 0) {
+                // WORKS FOR i=15, tag = 1
                 // save north for interprocess
-                int tmp = (int) i;
                 // printf("Sending to answer on tag %d\n", c);
-                MPI_Isend(&tmp, 1, MPI_INT, mpi_myrank-1, c, MPI_COMM_WORLD, &request);
+                MPI_Isend(&i_now[i], NPI, MPI_INT, mpi_myrank-1, c, MPI_COMM_WORLD, &request);
                 num_recv += 1;
             }
             else if (s && (r - g_i) == (rpr - 1)){
                 // save south for interprocess
-                int tmp = (int) i;
                 // printf("Sending to answer on tag %d\n", c);
-                MPI_Isend(&tmp, 1, MPI_INT, mpi_myrank+1, c, MPI_COMM_WORLD, &request);
+                MPI_Isend(&i_now[i], NPI, MPI_INT, mpi_myrank+1, c, MPI_COMM_WORLD, &request);
                 num_recv += 1;
             }
+            else{
+                update_i(i, n, s, w, e, i_now, i_nxt);
+            }
 
-            update_i(i, n, s, w, e, i_now, i_nxt);
 
             
         }
@@ -309,10 +348,10 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
     int done_recv = 0;
     while(!flag_n || !flag_s || !done_recv) {
         if(mpi_myrank != 0){
-            answer_rqsts(send_rqsts_n, i_strt, i_now, i_nxt, mpi_myrank-1, answered_n);
+            answer_rqsts(send_rqsts_n, i_strt, i_now, i_nxt, mpi_myrank-1, answered_n, recv_n);
         }
         if(mpi_myrank != mpi_commsize-1){
-            answer_rqsts(send_rqsts_s, i_strt+rpr*SIZE*NPI, i_now, i_nxt, mpi_myrank+1, answered_s);
+            answer_rqsts(send_rqsts_s, i_strt+(rpr-1)*SIZE*NPI, i_now, i_nxt, mpi_myrank+1, answered_s, recv_s);
         }
         // check for answered requests
         //   IF SPOT is open use it like normal
@@ -321,7 +360,7 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
             num_recv -= recv_rqsts(recv_rqsts_n, i_strt, i_now, i_nxt, answers_n, 0, g_i, received_n);
         }
         if(!done_recv && mpi_myrank != mpi_commsize-1){
-            num_recv -= recv_rqsts(recv_rqsts_s, i_strt+rpr*SIZE*NPI, i_now, i_nxt, answers_s, 0, g_i+rpr*SIZE*NPI, received_s);
+            num_recv -= recv_rqsts(recv_rqsts_s, i_strt+(rpr-1)*SIZE*NPI, i_now, i_nxt, answers_s, 1, g_i, received_s);
         }
 
         if(num_recv == 0 && done_recv == 0){
@@ -385,6 +424,8 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
             }
         }
     }
+
+    MPI_Barrier( MPI_COMM_WORLD );
 
     
     free(answers_n); 
@@ -450,10 +491,12 @@ int main(int argc, char *argv[])
     MPI_Barrier( MPI_COMM_WORLD );
 
 
+
     for (size_t i = 1; i < NUM_TICKS; ++i) {
+        printf("%d\n", i);
 
         // reach destination
-        reachdest(rpr*SIZE, intrsctns_now, glbl_index, i_strt);
+        reachdest(rpr*SIZE, intrsctns_now, glbl_index, i_strt, i);
         // do the exchange 
         exchange_rows(mpi_myrank, mpi_commsize, intrsctns_now, rpr);
         update_intersections(rpr*SIZE, intrsctns_now, intrsctns_nxt, glbl_index, i_strt ,rpr);
@@ -466,11 +509,11 @@ int main(int argc, char *argv[])
         MPI_Barrier( MPI_COMM_WORLD );
 
         clear_is(SIZE*(rpr + ghosts), intrsctns_nxt);
-        if(i==2 || i==1) {
-            prnt_ints(rpr + ghosts, glbl_index, intrsctns_now, mpi_myrank != 0);
-        }
 
+        
     }
+    // prnt_ints(rpr + ghosts, glbl_index, intrsctns_now, mpi_myrank != 0);
+
 
 
     MPI_Barrier( MPI_COMM_WORLD );
