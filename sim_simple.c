@@ -380,7 +380,7 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
                         // printf("%d\n", i);
                         // MPI_Request_free(&recv_rqsts_n[i]);
                         int junk[] = {-1, -1, -1};
-                        MPI_Isend(junk, 1, MPI_INT, mpi_myrank-1, i, MPI_COMM_WORLD, &request);
+                        MPI_Isend(junk, 3, MPI_INT, mpi_myrank-1, i, MPI_COMM_WORLD, &request);
                     }
                 }
                 if(mpi_myrank != mpi_commsize-1){
@@ -388,7 +388,7 @@ void update_intersections(int num, int* i_now, int* i_nxt, unsigned int g_i, int
                         // printf("%d\n", i);
                         // MPI_Request_free(&recv_rqsts_s[i]);
                         int junk[] = {-1, -1, -1};
-                        MPI_Isend(junk, 1, MPI_INT, mpi_myrank+1, i, MPI_COMM_WORLD, &request);
+                        MPI_Isend(junk, 3, MPI_INT, mpi_myrank+1, i, MPI_COMM_WORLD, &request);
                     }
                 }
             }
