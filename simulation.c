@@ -21,12 +21,10 @@
 #endif
 
 // #define DEBUG 1
-<<<<<<< HEAD
+// #define DEBUG_IS 1
 #define DEBUG_IS 1
 
-=======
 // #define DEBUG_IS 1
->>>>>>> 52df766bcf78080db41f49c81aa2cc42a3a5e078
 #include <assert.h>
 
 /***************************************************************************/
@@ -37,10 +35,14 @@
 #define SIDE_LENGTH 32768
 #else
 <<<<<<< HEAD
+#define SIDE_LENGTH 128
+=======
+<<<<<<< HEAD
 #define SIDE_LENGTH 64
 =======
 #define SIDE_LENGTH 128
 >>>>>>> 52df766bcf78080db41f49c81aa2cc42a3a5e078
+>>>>>>> d84236438ad9a261747e4ca4181368d333b3dd04
 #endif
 
 

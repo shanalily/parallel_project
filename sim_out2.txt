@@ -1,0 +1,513 @@
+Rank 0: Tick 0: Cars left is 112 96 0 18 226
+Rank 1: Tick 0: Cars left is 112 96 14 0 222
+reached destination! 10 3 2
+reached destination! 2 7 1
+reached destination! 4 13 3
+reached destination! 6 13 3
+before 0 0
+-------
+      
+      
+      
+      
+-------
+after 0 0
+-------
+      
+      
+      
+      
+-------
+before 1 1
+-------
+      
+      
+e     
+      
+-------
+West taking a right turn to the south
+after 1 1
+-------
+      
+      
+e     
+  s   
+-------
+before 2 2
+-------
+      
+      
+e     
+   n  
+-------
+West taking a right turn to the south
+south taking a left turn to the west
+after 2 2
+-------
+      
+w     
+e     
+  sn  
+-------
+before 3 1
+-------
+      
+      
+e     
+      
+-------
+West taking a right turn to the south
+after 3 1
+-------
+      
+      
+e     
+  s   
+-------
+before 4 2
+-------
+      
+      
+e     
+   n  
+-------
+West taking a right turn to the south
+south taking a left turn to the west
+after 4 2
+-------
+      
+w     
+e     
+  sn  
+-------
+before 5 2
+-------
+      
+      
+e     
+   n  
+-------
+West taking a right turn to the south
+south taking a left turn to the west
+after 5 2
+-------
+      
+w     
+e     
+  sn  
+-------
+before 6 2
+-------
+      
+      
+e     
+   n  
+-------
+West taking a right turn to the south
+south taking a left turn to the west
+after 6 2
+-------
+      
+w     
+e     
+  sn  
+-------
+before 7 2
+-------
+      
+      
+e     
+   n  
+-------
+West taking a right turn to the south
+south taking a left turn to the west
+after 7 2
+-------
+      
+w     
+e     
+  sn  
+-------
+before 8 1
+-------
+  s    
+      
+      
+      
+-------
+north taking a straight turn to the south
+after 8 1
+-------
+  s    
+      
+      
+  s   
+-------
+before 9 3
+-------
+  s    
+     w
+e     
+      
+-------
+West taking a right turn to the south
+East taking a right turn to the north
+north taking a left turn to the east
+after 9 3
+-------
+  sn   
+      
+e    e
+  s   
+-------
+before 10 3
+-------
+  s    
+     w
+e     
+      
+-------
+West taking a right turn to the south
+East taking a right turn to the north
+north taking a left turn to the east
+after 10 3
+-------
+  sn   
+      
+e    e
+  s   
+-------
+before 11 4
+-------
+  s    
+     w
+e     
+   n  
+-------
+West taking a right turn to the south
+East taking a right turn to the north
+north taking a left turn to the east
+south taking a left turn to the west
+after 11 4
+-------
+  sn   
+w     
+e    e
+  s   
+-------
+before 12 2
+-------
+      
+     w
+e     
+      
+-------
+West taking a right turn to the south
+east staying still, end dest 2 11
+after 12 1
+-------
+      
+     w
+      
+  sn  
+-------
+before 13 3
+-------
+  s    
+      
+e     
+   n  
+-------
+West taking a right turn to the south
+south taking a straight turn to the north
+north staying still, end dest 9 12
+after 13 2
+-------
+  sn   
+      
+e     
+  sn  
+-------
+before 14 1
+-------
+      
+      
+      
+   n  
+-------
+south taking a left turn to the west
+after 14 1
+-------
+      
+w     
+e     
+      
+-------
+before 15 2
+-------
+      
+      
+e     
+   n  
+-------
+West taking a right turn to the south
+south taking a left turn to the west
+after 15 2
+-------
+      
+w     
+e     
+  sn  
+-------
+before 16 1
+-------
+  s    
+      
+      
+      
+-------
+north taking a straight turn to the south
+after 16 1
+-------
+  s    
+     w
+      
+  s   
+-------
+before 17 3
+-------
+  s    
+     w
+      
+   n  
+-------
+East taking a right turn to the north
+north taking a straight turn to the south
+south staying still, end dest 12 1
+after 17 2
+-------
+  sn   
+     w
+e     
+  sn  
+-------
+before 18 2
+-------
+  s    
+      
+e     
+      
+-------
+West taking a right turn to the south
+north taking a left turn to the east
+after 18 2
+-------
+  s    
+      
+e    e
+  s   
+-------
+before 19 3
+-------
+  s    
+     w
+e     
+      
+-------
+West taking a right turn to the south
+East taking a right turn to the north
+north taking a left turn to the east
+after 19 3
+-------
+  sn   
+      
+e    e
+  s   
+-------
+before 20 2
+-------
+  s    
+      
+      
+   n  
+-------
+north taking a straight turn to the south
+south taking a straight turn to the north
+after 20 2
+-------
+  sn   
+      
+      
+  sn  
+-------
+before 21 2
+-------
+      
+      
+e     
+   n  
+-------
+West taking a right turn to the south
+south taking a left turn to the west
+after 21 2
+-------
+      
+w     
+e     
+  s   
+-------
+before 22 4
+-------
+  s    
+     w
+e     
+   n  
+-------
+West taking a right turn to the south
+east taking a straight turn to the west
+north staying still, end dest 2 13
+south staying still, end dest 12 11
+after 22 2
+-------
+  s    
+w     
+e     
+  sn  
+-------
+before 23 1
+-------
+      
+      
+      
+   n  
+-------
+south taking a left turn to the west
+after 23 1
+-------
+      
+w     
+      
+   n  
+-------
+before 24 1
+-------
+  s    
+      
+      
+      
+-------
+north taking a straight turn to the south
+after 24 1
+-------
+  s    
+     w
+      
+  s   
+-------
+before 25 0
+-------
+      
+      
+      
+      
+-------
+after 25 0
+-------
+  s    
+     w
+      
+      
+-------
+before 26 2
+-------
+  s    
+     w
+      
+      
+-------
+East taking a right turn to the north
+north taking a straight turn to the south
+after 26 2
+-------
+  sn   
+      
+e     
+  s   
+-------
+before 27 1
+-------
+      
+     w
+      
+      
+-------
+East taking a right turn to the north
+after 27 1
+-------
+  sn   
+     w
+      
+      
+-------
+before 28 2
+-------
+      
+     w
+      
+   n  
+-------
+East taking a right turn to the north
+south taking a left turn to the west
+after 28 2
+-------
+   n  
+w    w
+      
+      
+-------
+before 29 2
+-------
+      
+     w
+e     
+  s   
+-------
+West taking a right turn to the south
+East taking a right turn to the north
+after 29 2
+-------
+  sn   
+     w
+      
+  s   
+-------
+before 30 1
+-------
+      
+      
+      
+   n  
+-------
+south taking a straight turn to the north
+after 30 1
+-------
+   n  
+      
+      
+      
+-------
+before 31 1
+-------
+      
+      
+      
+  sn  
+-------
+south taking a straight turn to the north
+after 31 1
+-------
+   n  
+      
+      
+      
+-------

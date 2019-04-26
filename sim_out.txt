@@ -1,0 +1,504 @@
+Rank 0: Tick 0: Cars left is 112 96 0 16 224
+reached destination! 2 7 1
+reached destination! 4 13 3
+reached destination! 6 13 3
+Rank 1: Tick 0: Cars left is 112 96 16 0 224
+reached destination! 10 3 2
+before 0 0 0
+-------
+      
+      
+     e
+  s   
+-------
+after
+-------
+      
+      
+      
+      
+-------
+before 1 0 2
+-------
+      
+     w
+e    e
+      
+-------
+West taking a right turn to the south
+east taking a straight turn to the west
+after
+-------
+      
+w     
+      
+  s   
+-------
+before 2 0 4
+-------
+      
+      
+     e
+  s   
+-------
+after
+-------
+      
+      
+      
+      
+-------
+before 3 0 6
+-------
+      
+     w
+e     
+  s   
+-------
+West taking a right turn to the south
+east taking a straight turn to the west
+after
+-------
+      
+w     
+      
+  s   
+-------
+before 4 0 8
+-------
+      
+w     
+      
+  s   
+-------
+after
+-------
+      
+      
+      
+      
+-------
+before 5 0 10
+-------
+      
+w     
+e    e
+      
+-------
+West taking a right turn to the south
+after
+-------
+      
+      
+      
+  s   
+-------
+before 6 0 12
+-------
+      
+     w
+e     
+  s   
+-------
+west staying still, end dest 12 13
+east staying still, end dest 12 13
+after
+-------
+      
+     w
+e     
+      
+-------
+before 7 0 14
+-------
+      
+w     
+      
+  s   
+-------
+after
+-------
+      
+      
+      
+      
+-------
+before 8 2 0
+-------
+  s    
+     w
+     e
+      
+-------
+north staying still, end dest 2 13
+east staying still, end dest 1 12
+after
+-------
+  s    
+     w
+      
+      
+-------
+before 9 2 2
+-------
+  sn   
+     w
+     e
+  s   
+-------
+East taking a right turn to the north
+north staying still, end dest 3 6
+after
+-------
+  sn   
+      
+      
+      
+-------
+before 10 2 4
+-------
+  s    
+     w
+     e
+  s   
+-------
+north staying still, end dest 6 9
+east staying still, end dest 4 9
+after
+-------
+  s    
+     w
+      
+      
+-------
+before 11 2 6
+-------
+  s    
+     w
+     e
+  s   
+-------
+East taking a right turn to the north
+north staying still, end dest 8 9
+after
+-------
+  sn   
+      
+      
+      
+-------
+before 12 2 8
+-------
+  s    
+     w
+     e
+  s   
+-------
+North taking a right turn to the west
+East taking a right turn to the north
+after
+-------
+   n  
+w     
+      
+      
+-------
+before 13 2 10
+-------
+  sn   
+     w
+      
+      
+-------
+north staying still, end dest 12 9
+east staying still, end dest 10 1
+after
+-------
+  s    
+     w
+      
+      
+-------
+before 14 2 12
+-------
+  s    
+w    w
+      
+  sn  
+-------
+North taking a right turn to the west
+East taking a right turn to the north
+south staying still, end dest 13 2
+after
+-------
+   n  
+w     
+      
+   n  
+-------
+before 15 2 14
+-------
+  s    
+w     
+      
+  s   
+-------
+North taking a right turn to the west
+after
+-------
+      
+w     
+      
+      
+-------
+before 16 4 0
+-------
+  sn   
+     w
+     e
+  s   
+-------
+north staying still, end dest 12 7
+east staying still, end dest 1 2
+after
+-------
+  s    
+     w
+      
+      
+-------
+before 17 4 2
+-------
+  s    
+      
+     e
+  sn  
+-------
+north staying still, end dest 10 13
+south staying still, end dest 1 0
+after
+-------
+  s    
+      
+      
+   n  
+-------
+before 18 4 4
+-------
+  s    
+      
+e     
+      
+-------
+West taking a right turn to the south
+north staying still, end dest 10 11
+after
+-------
+  s    
+      
+      
+  s   
+-------
+before 19 4 6
+-------
+  s    
+w     
+e     
+  s   
+-------
+north staying still, end dest 14 5
+west staying still, end dest 6 9
+after
+-------
+  s    
+      
+e     
+      
+-------
+before 20 4 8
+-------
+  s    
+w     
+e     
+      
+-------
+West taking a right turn to the south
+north staying still, end dest 12 13
+after
+-------
+  s    
+      
+      
+  s   
+-------
+before 21 4 10
+-------
+  sn   
+w    w
+e    e
+  sn  
+-------
+North taking a right turn to the west
+West taking a right turn to the south
+East taking a right turn to the north
+south staying still, end dest 4 1
+after
+-------
+   n  
+w     
+      
+  sn  
+-------
+before 22 4 12
+-------
+      
+      
+      
+  s   
+-------
+after
+-------
+      
+      
+      
+      
+-------
+before 23 4 14
+-------
+  s    
+w     
+      
+      
+-------
+North taking a right turn to the west
+after
+-------
+      
+w     
+      
+      
+-------
+before 24 6 0
+-------
+  s    
+      
+      
+      
+-------
+north staying still, end dest 6 13
+after
+-------
+  s    
+      
+      
+      
+-------
+before 25 6 2
+-------
+      
+w    w
+e    e
+      
+-------
+West taking a right turn to the south
+east staying still, end dest 2 3
+after
+-------
+      
+     w
+      
+  s   
+-------
+before 26 6 4
+-------
+  sn   
+     w
+     e
+      
+-------
+East taking a right turn to the north
+north staying still, end dest 6 9
+after
+-------
+  sn   
+      
+      
+      
+-------
+before 27 6 6
+-------
+  s    
+     w
+     e
+      
+-------
+North taking a right turn to the west
+East taking a right turn to the north
+after
+-------
+   n  
+w     
+      
+      
+-------
+before 28 6 8
+-------
+  sn   
+     w
+     e
+      
+-------
+North taking a right turn to the west
+east staying still, end dest 9 12
+after
+-------
+      
+w    w
+      
+      
+-------
+before 29 6 10
+-------
+      
+     w
+      
+      
+-------
+East taking a right turn to the north
+after
+-------
+   n  
+      
+      
+      
+-------
+before 30 6 12
+-------
+  s    
+w     
+      
+      
+-------
+North taking a right turn to the west
+after
+-------
+      
+w     
+      
+      
+-------
+before 31 6 14
+-------
+  sn   
+w     
+      
+      
+-------
+North taking a right turn to the west
+after
+-------
+      
+w     
+      
+      
+-------
