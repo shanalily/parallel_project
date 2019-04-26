@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
     double proportion = 0.05;
     int total_cars = mk_cars(proportion);
     printf("total cars: %d\n", total_cars);
-    // print_interstate();
+    print_interstate(interstate_west, interstate_east);
     local_miles_travelled = run_simulation(interstate_west, interstate_east);
 
     MPI_Reduce(&total_cars, &global_total_cars, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -154,14 +154,14 @@ int update_roads(unsigned int miles_per_rank, unsigned int *interstate_west,
         interstate_east[CAR*miles_per_rank-CAR+1] = 0;
     }
     for (int i = CAR*miles_per_rank-CAR; i >= CAR; i -= CAR) {
-        if (!interstate_west[i]) {
+        if (!interstate_west[i] && interstate_west[i-CAR]) {
             interstate_west[i] = interstate_west[i-CAR];
             interstate_west[i+1] = interstate_west[i-CAR+1];
             interstate_west[i-CAR] = 0;
-            miles_travelled += 1;
+            miles_travelled += 1; // can I just add the total number when the car has reached its destination?
         }
 
-        if (!interstate_east[i]) {
+        if (!interstate_east[i] && interstate_east[i-CAR]) {
             interstate_east[i] = interstate_east[i-CAR];
             interstate_east[i+1] = interstate_east[i-CAR+1];
             interstate_east[i-CAR] = 0;
@@ -188,8 +188,10 @@ int reached_dest(unsigned int *interstate, int i, int east) {
 
 int run_simulation(unsigned int *interstate_west, unsigned int *interstate_east) {
     int c1[1], c2[1], m1[1], m2[2];
-    int total_reached = 0, empty_val = -1, can_move_west=0, can_move_east=0, miles_travelled=0;
+    int total_reached=0, null_val=-1, empty_val=0, full_val=1, can_move_west=0, can_move_east=0, miles_travelled=0;
+    int *null = &null_val;
     int *empty = &empty_val;
+    int *full = &full_val;
     for (int i = 0; i < NUM_TICKS; ++i) {
         // one rank is sending a message to another rank to see if it can send a car. If sent, it will be set.
         // How does it get the message back that it can move?
@@ -205,43 +207,48 @@ int run_simulation(unsigned int *interstate_west, unsigned int *interstate_east)
         }
 
         if (mpi_myrank > 0) { // send to west, say whether or not the space is free
-            if (interstate_west[0]) {
-                MPI_Isend(empty, 1, MPI_INT, mpi_myrank-1, mpi_myrank, MPI_COMM_WORLD, &requests[0]);
-            }
+            // empty or full to western east
+            if (interstate_west[0])
+                MPI_Isend(empty, 1, MPI_INT, mpi_myrank-1, mpi_myrank+mpi_commsize, MPI_COMM_WORLD, &requests[3]);
             else
-                MPI_Isend(interstate_west+CAR*miles_per_rank-1, 1, MPI_INT, mpi_myrank-1, mpi_myrank, MPI_COMM_WORLD, &requests[0]);
+                MPI_Isend(full, 1, MPI_INT, mpi_myrank-1, mpi_myrank+mpi_commsize, MPI_COMM_WORLD, &requests[3]);
+            // send car or null to western west
+            if (interstate_west[CAR*miles_per_rank-1])
+                MPI_Isend(interstate_west+CAR*miles_per_rank-1, 1, MPI_INT, mpi_myrank-1, mpi_myrank, MPI_COMM_WORLD, &requests[1]);
+            else
+                MPI_Isend(null, 1, MPI_INT, mpi_myrank-1, mpi_myrank, MPI_COMM_WORLD, &requests[1]);
         }
         if (mpi_myrank < mpi_commsize-1) { // send to east, say whether or not the space is free
-            if (interstate_east[0]) {
-                MPI_Isend(empty, 1, MPI_INT, mpi_myrank+1, mpi_myrank, MPI_COMM_WORLD, &requests[1]);
-            }
+            // empty or full to eastern west
+            if (interstate_east[0])
+                MPI_Isend(empty, 1, MPI_INT, mpi_myrank+1, mpi_myrank+mpi_commsize, MPI_COMM_WORLD, &requests[2]);
             else
-                MPI_Isend(interstate_east+CAR*miles_per_rank-CAR+1, 1, MPI_INT, mpi_myrank+1, mpi_myrank, MPI_COMM_WORLD, &requests[1]);
+                MPI_Isend(full, 1, MPI_INT, mpi_myrank+1, mpi_myrank+mpi_commsize, MPI_COMM_WORLD, &requests[2]);
+            // send car or null to eastern east
+            if (interstate_east[CAR*miles_per_rank-1])
+                MPI_Isend(interstate_east+CAR*miles_per_rank-CAR+1, 1, MPI_INT, mpi_myrank+1, mpi_myrank, MPI_COMM_WORLD, &requests[0]);
+            else
+                MPI_Isend(null, 1, MPI_INT, mpi_myrank+1, mpi_myrank, MPI_COMM_WORLD, &requests[0]);
         }
 
         if (mpi_myrank > 0) { // wait on west
-            MPI_Wait(&requests[0], &status[0]); // receive something about whether or not space is free
+            MPI_Wait(&requests[0], &status[0]); // receive car or null
+            MPI_Wait(&requests[2], &status[2]); // receive something about whether or not space is free
             if (c1[0] >= 0) {
                 interstate_east[0] = 1; // car exists
                 interstate_east[1] = *c1; // destination
                 // printf("c1: %d %d\n", c1[0], c1[1]);
             }
+            if (m1[0]>=0) can_move_west = 1;
         }
         if (mpi_myrank < mpi_commsize-1) { // wait on east
-            MPI_Wait(&requests[1], &status[1]);
+            MPI_Wait(&requests[1], &status[1]); // receive car or null
+            MPI_Wait(&requests[3], &status[3]); // receive something about whether or not space is free
             if (c2[0] >= 0) {
                 interstate_west[0] = 1; // car exists
                 interstate_west[1] = *c2; // destination
                 // printf("c2: %d %d\n", c2[0], c2[1]);
             }
-        }
-
-        if (mpi_myrank > 0) {
-            MPI_Wait(&requests[0], &status[2]);
-            if (m1[0]>=0) can_move_west = 1;
-        }
-        if (mpi_myrank < mpi_commsize-1) {
-            MPI_Wait(&requests[1], &status[3]);
             if (m2[0]>=0) can_move_east = 1;
         }
 
@@ -250,7 +257,7 @@ int run_simulation(unsigned int *interstate_west, unsigned int *interstate_east)
         // update roads
         miles_travelled += update_roads(miles_per_rank, interstate_west, interstate_east, can_move_west, can_move_east);
 
-        // print_interstate();
+        // print_interstate(interstate_west, interstate_east);
 
         // check if reached destination
         for (int j = 0; j < CAR*miles_per_rank; j += CAR) {
@@ -258,13 +265,13 @@ int run_simulation(unsigned int *interstate_west, unsigned int *interstate_east)
                 interstate_west[j] = 0; // remove from interstate, they're taking their exit!
                 interstate_west[j+1] = 0;
                 total_reached += 1;
-                printf("reached destination at %d! %d\n", j, interstate_west[j+1]);
+                printf("reached destination at %d! total_reached = %d\n", j, total_reached);
             }
             if (interstate_east[j] && reached_dest(interstate_east, j, 1)) {
                 interstate_east[j] = 0;
                 interstate_east[j+1] = 0;
                 total_reached += 1;
-                printf("reached destination at %d! %d\n", j, interstate_east[j+1]);
+                printf("reached destination at %d! total_reached = %d\n", j, total_reached);
             }
         }
 
