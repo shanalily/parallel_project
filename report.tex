@@ -106,6 +106,7 @@ deadlocking the system.
 This difficulty in protocol was magnified by the graph like nature of our problem. A visualization can be seen in figure 3. Each intersection at a point in time could be considered a node. The movement from a node to another at each tick could be considered an edge. To solve this graph the goal would be to find a non-overlapping path from each starting node to each ending node (technically a set of ending nodes as the time stamp of the node does not matter). The difficulty in solving graph based problems in parallel is well documented due to their incosistant and irregular nature. We definetly encountered this problem in this implimentation as receives had to be posted that never got sent to (and had to be resolved later which is likely where our deadlock issue was).
 Given more time it is likely we could've perfected this implimentation either through debugging or the adding of additional inefficiencies to ensure everything worked. 
 
+
 \subsection{Final Implementation}
 A visualization of the protocol can be seen in figure 4.
 
