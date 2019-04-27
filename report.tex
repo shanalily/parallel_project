@@ -3,7 +3,7 @@
 \usepackage{times}
 \usepackage{latexsym}
 \usepackage{graphicx}
-
+\usepackage{float}
 \usepackage{url}
 
 \aclfinalcopy % Uncomment this line for the final submission
@@ -95,6 +95,7 @@ Our program worked with only 1 rank, but when multiple ranks were used, the prog
     \label{fig:my_label}
 \end{figure*}
 
+
 After the faluire of our first try we attempted to simplify and refocus our simulation. We kept many of the same details from the initial implementation,but now there are only intersections and no streets. This reduced complexicity by eliminating much of the computation. This rather than being a microspic model was a macrospic model. We no longer had to manage street arrays or have complicated intersections traffic rules. The goal of the this implimentation was to refocus it on communication between MPI ranks. This refocus was also its downfall. 
 
 In our first implimentation although the traffic mechanics were complicated, the MPI exchange was actually quite simple. All data could be sent before each tick and the implimentation was parallel deterministic. However, due to some fundamentals the 2nd implimentation was not possible to be made parallel deterministic and required some difficult inter-rank communication. When updating an intersection, the intersection would have to check with its neighboring intersection to see if that intersection was already full in the current tick or in the previous tick. This was a trivial class within one mpi rank. This was not a trivial task between mpi ranks. To do this we developed a bit of an exchange protocol. The requesting rank would send a request with the data it wished to send. The answering rank would receive that data and if it was an eligible move, it would impliment the changes specified and send back a positive confirmation. If it was not an eligible move it would return a negative confirmation. With a positive confirmation the original rank would not continue any further as the move was completed by the other rank. With a negative confirmation the original rank would attempt to proceed knowing that the rank transitory move was not valid.
@@ -102,31 +103,46 @@ The additional difficulty of this implimentation in order to keep it highly para
 were checks in place to make sure each rank answered all of its corresponding requests before moving,
 the system got deadlocked (some of the time with frequency scaling up with size of grid and number of ranks) with more than 2 ranks. We are not sure exactly what happened, but it is likely either some element of our protocol was incorrect or the checks got corrupted with an errounous send or receive
 deadlocking the system.
-This difficulty in protocol was magnified by the graph like nature of our problem. Each intersection at a point in time could be considered a node. The movement from a node to another at each tick could be considered an edge. To solve this graph the goal would be to find a non-overlapping path from each starting node to each ending node (technically a set of ending nodes as the time stamp of the node does not matter). The difficulty in solving graph based problems in parallel is well documented due to their incosistant and irregular nature. We definetly encountered this problem in this implimentation as receives had to be posted that never got sent to (and had to be resolved later which is likely where our deadlock issue was).
+This difficulty in protocol was magnified by the graph like nature of our problem. A visualization can be seen in figure 3. Each intersection at a point in time could be considered a node. The movement from a node to another at each tick could be considered an edge. To solve this graph the goal would be to find a non-overlapping path from each starting node to each ending node (technically a set of ending nodes as the time stamp of the node does not matter). The difficulty in solving graph based problems in parallel is well documented due to their incosistant and irregular nature. We definetly encountered this problem in this implimentation as receives had to be posted that never got sent to (and had to be resolved later which is likely where our deadlock issue was).
 Given more time it is likely we could've perfected this implimentation either through debugging or the adding of additional inefficiencies to ensure everything worked. 
 
 \subsection{Final Implementation}
+A visualization of the protocol can be seen in figure 4.
 
 \begin{figure*}
     \centering
     \includegraphics[scale=0.4]{imp3_diag.png}
-    \caption{An model of the graph that implimentation 2 was supposed to solve. Here the blue car starting at 0,0 goal is to get to 1,0 and it does that at t=1. The orange car starts at 1,1 and its goal is to get to 0,0. It does that at t=2.}
+    \caption{A model of the interprocess protocol for the 3rd implimentation. It does that at t=2.}
     \label{fig:my_label}
 \end{figure*}
 
-
 \section{Performance Results}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.3]{seconds.png}
+    \caption{The time of computation taken for additional nodes. * denotes extrapolated data}
+    \label{fig:my_label}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.3]{speedup.png}
+    \caption{The speedup over 1 node (64 ranks). * denotes extrapolated data}
+    \label{fig:my_label}
+\end{figure}
+
 
 \section{Analysis of Performance}
 
-\section{Future work}
-
+As you can see in our performance results our implimentation did not strong scale
+particularly well. Like all parallel implimentations, our implimentation is a race between inter-rank communicaiton and parallel computation. If there is too much inter rank communication then the amount of idle time created by the communication outweighs the reduced computation time by increased parallelism. With a highway of size 32K, we saw a maximun speedup at 4 nodes. Any additional nodes only slows down our implimentation.
 
 \section{Conclusion}
 
 \section{Team Organization}
 
-In our first version, Alex wrote all of the MPI code and the initial architecture, and Shoshana was working on updating intersections and streets according to traffic rules. Alex wrote most of the second version and Shoshana wrote most of the 3rd version. Both wrote the report. Both team members ran jobs on the Blue Gene and debugged.
+In our first version, Alex wrote all of the MPI code and the initial architecture, and Shoshana was working on updating intersections and streets according to traffic rules. For the second version, Alex wrote most of code and for the third version Shoshana wrote most of the 3rd version. Both wrote the report. Both team members ran jobs on the Blue Gene and debugged.
 
 \bibliographystyle{acl2019}
 \bibliography{acl_natbib}
