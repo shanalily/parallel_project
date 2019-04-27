@@ -5,6 +5,7 @@
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{url}
+\usepackage{natbib}
 
 \aclfinalcopy % Uncomment this line for the final submission
 %\def\aclpaperid{***} %  Enter the acl Paper ID here
@@ -140,6 +141,7 @@ As you can see in our performance results our implimentation did not strong scal
 particularly well. Like all parallel implimentations, our implimentation is a race between inter-rank communicaiton and parallel computation. If there is too much inter rank communication then the amount of idle time created by the communication outweighs the reduced computation time by increased parallelism. With a highway of size 32K, we saw a maximun speedup at 4 nodes. Any additional nodes only slows down our implimentation.
 
 \section{Conclusion}
+While doing this project we ran into many of the inherent challenges of doing discrete event simulation on high performance computing. Discrete event simulation inherently requires a large amount of inter-process communication. In our working implimentation this large amount substantially reduced our speedup we were able to achieve. In our non-functional implimnetations the large degree of inter-process communication hampered our work eventually resulting in us having to move on and work on a simpler simulation. The other difficulty we encountered was inherent load balance and access irreguritiy. Due to the graph like nature of our implimentations we had similiar problems to other running graphs in high performance applications. Discrete even problems remain difficult to simulate and in the future we would do things differently.
 
 \section{Team Organization}
 
